@@ -1,18 +1,23 @@
-// ========================================
+// ============================================================
 // INTERNATIONAL REMOTE JOBS BACKEND
-//
 // FOR NIGERIANS
 //
-// SOURCES:
-// 1. Himalayas
-// 2. Hunter (optional email enrichment)
+// SOURCE:
+// Himalayas Remote Jobs API
+//
+// OPTIONAL:
+// Hunter API for publicly available company emails
+//
+// TELEGRAM:
+// Existing Telegram bot can automatically post jobs
 //
 // IMPORTANT:
-// - Nigeria jobs
+// - Remote jobs Nigerians can work from Nigeria
 // - Worldwide remote jobs
+// - Nigeria-specific remote jobs
 // - Visa sponsorship jobs
 // - Never invent emails
-// ========================================
+// ============================================================
 
 const express = require("express");
 const cors = require("cors");
@@ -25,20 +30,23 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 
 
-// ========================================
-// API
-// ========================================
+// ============================================================
+// API URLS
+// ============================================================
 
 const HIMALAYAS_SEARCH_API =
   "https://himalayas.app/jobs/api/search";
+
+const HIMALAYAS_BROWSE_API =
+  "https://himalayas.app/jobs/api";
 
 const HUNTER_API =
   "https://api.hunter.io/v2";
 
 
-// ========================================
+// ============================================================
 // CACHE
-// ========================================
+// ============================================================
 
 const cache = new Map();
 
@@ -46,30 +54,52 @@ const CACHE_TIME =
   30 * 60 * 1000;
 
 
-// ========================================
+// ============================================================
+// TELEGRAM
+// ============================================================
+
+const TELEGRAM_BOT_TOKEN =
+  process.env.TELEGRAM_BOT_TOKEN || "";
+
+const TELEGRAM_CHANNEL_ID =
+  process.env.TELEGRAM_CHANNEL_ID || "";
+
+const TELEGRAM_API =
+  "https://api.telegram.org";
+
+
+// Keep IDs in memory to reduce duplicates.
+// Note: Render restarts clear this memory.
+const telegramPostedJobs =
+  new Set();
+
+
+// ============================================================
 // FETCH HELPER
-// ========================================
+// ============================================================
 
 async function fetchJson(url) {
 
-  const response = await fetch(url);
+  const response =
+    await fetch(url);
 
   if (!response.ok) {
 
-    throw new Error(
-      `HTTP ${response.status}`
-    );
+    const text =
+      await response.text();
 
+    throw new Error(
+      `HTTP ${response.status}: ${text.slice(0, 300)}`
+    );
   }
 
   return await response.json();
-
 }
 
 
-// ========================================
+// ============================================================
 // CLEAN HTML
-// ========================================
+// ============================================================
 
 function cleanHtml(html = "") {
 
@@ -90,35 +120,12 @@ function cleanHtml(html = "") {
       " "
     )
 
-    .replace(
-      /&nbsp;/gi,
-      " "
-    )
-
-    .replace(
-      /&amp;/gi,
-      "&"
-    )
-
-    .replace(
-      /&lt;/gi,
-      "<"
-    )
-
-    .replace(
-      /&gt;/gi,
-      ">"
-    )
-
-    .replace(
-      /&#39;/gi,
-      "'"
-    )
-
-    .replace(
-      /&quot;/gi,
-      '"'
-    )
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
 
     .replace(
       /\s+/g,
@@ -126,13 +133,12 @@ function cleanHtml(html = "") {
     )
 
     .trim();
-
 }
 
 
-// ========================================
+// ============================================================
 // JOB TEXT
-// ========================================
+// ============================================================
 
 function getJobText(job) {
 
@@ -141,21 +147,26 @@ function getJobText(job) {
     `${job.title || ""} ` +
     `${job.excerpt || ""} ` +
     `${job.description || ""} ` +
-    `${Array.isArray(job.categories)
-      ? job.categories.join(" ")
-      : ""} ` +
-    `${Array.isArray(job.parentCategories)
-      ? job.parentCategories.join(" ")
-      : ""}`
+
+    `${
+      Array.isArray(job.categories)
+        ? job.categories.join(" ")
+        : ""
+    } ` +
+
+    `${
+      Array.isArray(job.parentCategories)
+        ? job.parentCategories.join(" ")
+        : ""
+    }`
 
   ).toLowerCase();
-
 }
 
 
-// ========================================
+// ============================================================
 // LOCATION
-// ========================================
+// ============================================================
 
 function getLocations(job) {
 
@@ -164,20 +175,24 @@ function getLocations(job) {
   )
     ? job.locationRestrictions
     : [];
-
 }
 
 
-// ========================================
-// IS NIGERIA ELIGIBLE?
-// ========================================
+// ============================================================
+// NIGERIA ELIGIBILITY
+//
+// Empty locationRestrictions = worldwide
+// Nigeria = accepted
+// Africa = accepted
+// ============================================================
 
 function isNigeriaEligible(job) {
 
   const locations =
     getLocations(job);
 
-  // Empty means worldwide
+
+  // Worldwide
   if (
     locations.length === 0
   ) {
@@ -186,10 +201,10 @@ function isNigeriaEligible(job) {
       eligible: true,
       reason: "worldwide"
     };
-
   }
 
 
+  // Nigeria
   const nigeria =
     locations.some(location => {
 
@@ -213,7 +228,6 @@ function isNigeriaEligible(job) {
         name === "nigeria" ||
         slug === "nigeria"
       );
-
     });
 
 
@@ -223,11 +237,10 @@ function isNigeriaEligible(job) {
       eligible: true,
       reason: "nigeria"
     };
-
   }
 
 
-  // Africa-wide jobs
+  // Africa
   const africa =
     locations.some(location => {
 
@@ -245,7 +258,6 @@ function isNigeriaEligible(job) {
         name === "africa" ||
         slug === "africa"
       );
-
     });
 
 
@@ -255,7 +267,6 @@ function isNigeriaEligible(job) {
       eligible: true,
       reason: "africa"
     };
-
   }
 
 
@@ -263,18 +274,21 @@ function isNigeriaEligible(job) {
     eligible: false,
     reason: "other_country"
   };
-
 }
 
 
-// ========================================
+// ============================================================
 // REMOTE CHECK
-// ========================================
+//
+// Himalayas is already a remote-jobs API.
+// Only reject clearly onsite-only jobs.
+// ============================================================
 
 function isRemote(job) {
 
   const text =
     getJobText(job);
+
 
   const badTerms = [
 
@@ -299,21 +313,16 @@ function isRemote(job) {
   ];
 
 
-  const found =
-    badTerms.some(
-      term =>
-        text.includes(term)
-    );
-
-
-  return !found;
-
+  return !badTerms.some(
+    term =>
+      text.includes(term)
+  );
 }
 
 
-// ========================================
-// FOREIGN ONLY
-// ========================================
+// ============================================================
+// FOREIGN-ONLY CHECK
+// ============================================================
 
 function isForeignOnly(job) {
 
@@ -359,13 +368,12 @@ function isForeignOnly(job) {
     term =>
       text.includes(term)
   );
-
 }
 
 
-// ========================================
+// ============================================================
 // SEARCH HIMALAYAS
-// ========================================
+// ============================================================
 
 async function searchHimalayas({
   search = "",
@@ -386,7 +394,6 @@ async function searchHimalayas({
       "q",
       search
     );
-
   }
 
 
@@ -396,7 +403,6 @@ async function searchHimalayas({
       "country",
       country
     );
-
   }
 
 
@@ -406,7 +412,6 @@ async function searchHimalayas({
       "worldwide",
       "true"
     );
-
   }
 
 
@@ -423,7 +428,7 @@ async function searchHimalayas({
 
 
   console.log(
-    "Himalayas request:",
+    "Himalayas:",
     url.toString()
   );
 
@@ -447,13 +452,12 @@ async function searchHimalayas({
       )
 
   };
-
 }
 
 
-// ========================================
-// GET NIGERIA + WORLDWIDE JOBS
-// ========================================
+// ============================================================
+// GET REMOTE JOBS
+// ============================================================
 
 async function getRemoteJobs(
   search = "",
@@ -465,9 +469,7 @@ async function getRemoteJobs(
 
 
   const cached =
-    cache.get(
-      cacheKey
-    );
+    cache.get(cacheKey);
 
 
   if (
@@ -477,7 +479,6 @@ async function getRemoteJobs(
   ) {
 
     return cached.data;
-
   }
 
 
@@ -488,22 +489,20 @@ async function getRemoteJobs(
   let worldwideTotal = 0;
 
 
+  // ==========================================================
+  // NIGERIA
+  // ==========================================================
+
   try {
 
-    // ========================================
-    // NIGERIA
-    // ========================================
-
-    const nigeria =
+    const result =
       await searchHimalayas({
 
         search,
 
-        country:
-          "NG",
+        country: "NG",
 
-        worldwide:
-          false,
+        worldwide: false,
 
         page
 
@@ -511,38 +510,32 @@ async function getRemoteJobs(
 
 
     nigeriaJobs =
-      nigeria.jobs;
+      result.jobs;
 
     nigeriaTotal =
-      nigeria.totalCount;
-
+      result.totalCount;
 
   } catch (error) {
 
     console.error(
-      "Nigeria search failed:",
+      "Nigeria Himalayas error:",
       error.message
     );
-
   }
 
 
-  // ========================================
+  // ==========================================================
   // WORLDWIDE
-  // ========================================
+  // ==========================================================
 
   try {
 
-    const worldwide =
+    const result =
       await searchHimalayas({
 
         search,
 
-        country:
-          "",
-
-        worldwide:
-          true,
+        worldwide: true,
 
         page
 
@@ -550,25 +543,23 @@ async function getRemoteJobs(
 
 
     worldwideJobs =
-      worldwide.jobs;
+      result.jobs;
 
     worldwideTotal =
-      worldwide.totalCount;
-
+      result.totalCount;
 
   } catch (error) {
 
     console.error(
-      "Worldwide search failed:",
+      "Worldwide Himalayas error:",
       error.message
     );
-
   }
 
 
-  // ========================================
+  // ==========================================================
   // COMBINE
-  // ========================================
+  // ==========================================================
 
   const combined = [
 
@@ -579,9 +570,9 @@ async function getRemoteJobs(
   ];
 
 
-  // ========================================
+  // ==========================================================
   // DEDUPLICATE
-  // ========================================
+  // ==========================================================
 
   const seen =
     new Set();
@@ -601,20 +592,18 @@ async function getRemoteJobs(
       ) {
 
         return false;
-
       }
 
 
       seen.add(key);
 
       return true;
-
     });
 
 
-  // ========================================
+  // ==========================================================
   // FILTER
-  // ========================================
+  // ==========================================================
 
   const accepted = [];
 
@@ -623,18 +612,15 @@ async function getRemoteJobs(
     const job of unique
   ) {
 
-    const location =
-      isNigeriaEligible(
-        job
-      );
+    const eligibility =
+      isNigeriaEligible(job);
 
 
     if (
-      !location.eligible
+      !eligibility.eligible
     ) {
 
       continue;
-
     }
 
 
@@ -643,7 +629,6 @@ async function getRemoteJobs(
     ) {
 
       continue;
-
     }
 
 
@@ -652,20 +637,16 @@ async function getRemoteJobs(
     ) {
 
       continue;
-
     }
 
 
-    accepted.push(
-      job
-    );
-
+    accepted.push(job);
   }
 
 
-  // ========================================
+  // ==========================================================
   // FORMAT
-  // ========================================
+  // ==========================================================
 
   const formatted =
     accepted.map(
@@ -679,8 +660,7 @@ async function getRemoteJobs(
 
   const result = {
 
-    jobs:
-      formatted,
+    jobs: formatted,
 
     totalNigeria:
       nigeriaTotal,
@@ -697,25 +677,19 @@ async function getRemoteJobs(
   cache.set(
     cacheKey,
     {
-
-      time:
-        Date.now(),
-
-      data:
-        result
-
+      time: Date.now(),
+      data: result
     }
   );
 
 
   return result;
-
 }
 
 
-// ========================================
+// ============================================================
 // EMAIL EXTRACTION
-// ========================================
+// ============================================================
 
 function extractEmails(job) {
 
@@ -742,13 +716,12 @@ function extractEmails(job) {
       )
     )
   ];
-
 }
 
 
-// ========================================
+// ============================================================
 // URL EXTRACTION
-// ========================================
+// ============================================================
 
 function extractUrls(job) {
 
@@ -780,11 +753,9 @@ function extractUrls(job) {
           try {
 
             const host =
-              new URL(
-                url
-              )
-              .hostname
-              .toLowerCase();
+              new URL(url)
+                .hostname
+                .toLowerCase();
 
 
             return (
@@ -806,20 +777,17 @@ function extractUrls(job) {
           } catch {
 
             return false;
-
           }
-
         })
 
     )
   ];
-
 }
 
 
-// ========================================
+// ============================================================
 // APPLICATION
-// ========================================
+// ============================================================
 
 function getApplication(job) {
 
@@ -843,8 +811,7 @@ function getApplication(job) {
 
     return {
 
-      type:
-        "email",
+      type: "email",
 
       email:
         emails[0],
@@ -855,7 +822,6 @@ function getApplication(job) {
         ""
 
     };
-
   }
 
 
@@ -868,14 +834,12 @@ function getApplication(job) {
       type:
         "application_link",
 
-      email:
-        "",
+      email: "",
 
       url:
         applicationLink
 
     };
-
   }
 
 
@@ -888,14 +852,12 @@ function getApplication(job) {
       type:
         "company_website",
 
-      email:
-        "",
+      email: "",
 
       url:
         urls[0]
 
     };
-
   }
 
 
@@ -904,358 +866,17 @@ function getApplication(job) {
     type:
       "application_only",
 
-    email:
-      "",
+    email: "",
 
-    url:
-      ""
+    url: ""
 
   };
-
 }
 
 
-// ========================================
-// COMPANY DOMAIN
-// ========================================
-
-function getCompanyDomain(job) {
-
-  const urls =
-    extractUrls(job);
-
-
-  for (
-    const url of urls
-  ) {
-
-    try {
-
-      const host =
-        new URL(
-          url
-        )
-        .hostname
-        .toLowerCase()
-        .replace(
-          /^www\./,
-          ""
-        );
-
-
-      if (
-        host &&
-        !host.includes(
-          "himalayas.app"
-        )
-      ) {
-
-        return host;
-
-      }
-
-    } catch {}
-
-  }
-
-
-  return "";
-
-}
-
-
-// ========================================
-// HUNTER
-// ========================================
-
-async function findCompanyEmail(job) {
-
-  const apiKey =
-    process.env.HUNTER_API_KEY;
-
-
-  if (
-    !apiKey
-  ) {
-
-    return {
-
-      found:
-        false,
-
-      email:
-        "",
-
-      name:
-        "",
-
-      position:
-        "",
-
-      domain:
-        ""
-
-    };
-
-  }
-
-
-  const domain =
-    getCompanyDomain(job);
-
-
-  if (
-    !domain
-  ) {
-
-    return {
-
-      found:
-        false,
-
-      email:
-        "",
-
-      name:
-        "",
-
-      position:
-        "",
-
-      domain:
-        ""
-
-    };
-
-  }
-
-
-  const cacheKey =
-    `hunter:${domain}`;
-
-
-  const cached =
-    cache.get(
-      cacheKey
-    );
-
-
-  if (
-    cached &&
-    Date.now() - cached.time <
-      24 * 60 * 60 * 1000
-  ) {
-
-    return cached.data;
-
-  }
-
-
-  try {
-
-    const url =
-      new URL(
-        `${HUNTER_API}/domain-search`
-      );
-
-
-    url.searchParams.set(
-      "domain",
-      domain
-    );
-
-
-    url.searchParams.set(
-      "api_key",
-      apiKey
-    );
-
-
-    url.searchParams.set(
-      "limit",
-      "10"
-    );
-
-
-    const data =
-      await fetchJson(
-        url.toString()
-      );
-
-
-    const emails =
-      data?.data?.emails || [];
-
-
-    if (
-      !emails.length
-    ) {
-
-      return {
-
-        found:
-          false,
-
-        email:
-          "",
-
-        name:
-          "",
-
-        position:
-          "",
-
-        domain
-
-      };
-
-    }
-
-
-    const scored =
-      emails.map(
-        person => {
-
-          const email =
-            String(
-              person.value || ""
-            ).toLowerCase();
-
-
-          const position =
-            String(
-              person.position || ""
-            ).toLowerCase();
-
-
-          let score =
-            Number(
-              person.confidence || 0
-            );
-
-
-          if (
-            /^(hr|careers|career|jobs|recruiting|recruitment|talent|hiring|people|info|contact)@/i
-              .test(email)
-          ) {
-
-            score += 100;
-
-          }
-
-
-          if (
-            /hr|human resources|recruit|recruiting|recruitment|talent|hiring|people|talent acquisition/
-              .test(position)
-          ) {
-
-            score += 80;
-
-          }
-
-
-          return {
-
-            ...person,
-
-            score
-
-          };
-
-        }
-      );
-
-
-    scored.sort(
-      (
-        a,
-        b
-      ) =>
-        b.score -
-        a.score
-    );
-
-
-    const best =
-      scored[0];
-
-
-    const result = {
-
-      found:
-        Boolean(
-          best?.value
-        ),
-
-      email:
-        best?.value || "",
-
-      name:
-        [
-          best?.first_name,
-          best?.last_name
-        ]
-          .filter(Boolean)
-          .join(" "),
-
-      position:
-        best?.position || "",
-
-      domain
-
-    };
-
-
-    cache.set(
-      cacheKey,
-      {
-
-        time:
-          Date.now(),
-
-        data:
-          result
-
-      }
-    );
-
-
-    return result;
-
-  } catch (error) {
-
-    console.error(
-      "Hunter failed:",
-      error.message
-    );
-
-
-    return {
-
-      found:
-        false,
-
-      email:
-        "",
-
-      name:
-        "",
-
-      position:
-        "",
-
-      domain
-
-    };
-
-  }
-
-}
-
-
-// ========================================
+// ============================================================
 // JOB CATEGORY
-// ========================================
+// ============================================================
 
 function getJobType(job) {
 
@@ -1267,9 +888,7 @@ function getJobType(job) {
     /customer support|customer service|customer care|chat support|live chat|help desk/
       .test(text)
   ) {
-
     return "Customer Service";
-
   }
 
 
@@ -1277,9 +896,7 @@ function getJobType(job) {
     /sales|business development|appointment setter|lead generation/
       .test(text)
   ) {
-
     return "Sales";
-
   }
 
 
@@ -1287,9 +904,7 @@ function getJobType(job) {
     /virtual assistant|administrative assistant|executive assistant|personal assistant/
       .test(text)
   ) {
-
     return "Virtual Assistant";
-
   }
 
 
@@ -1297,9 +912,7 @@ function getJobType(job) {
     /data entry|data processing/
       .test(text)
   ) {
-
     return "Data Entry";
-
   }
 
 
@@ -1307,9 +920,7 @@ function getJobType(job) {
     /data annotation|data labeling|ai trainer|ai evaluator|ai rater/
       .test(text)
   ) {
-
     return "AI & Data Annotation";
-
   }
 
 
@@ -1317,9 +928,7 @@ function getJobType(job) {
     /social media|community manager/
       .test(text)
   ) {
-
     return "Social Media";
-
   }
 
 
@@ -1327,9 +936,7 @@ function getJobType(job) {
     /marketing|digital marketing|growth marketing/
       .test(text)
   ) {
-
     return "Marketing";
-
   }
 
 
@@ -1337,9 +944,7 @@ function getJobType(job) {
     /content writer|content creator|copywriter|blog writer/
       .test(text)
   ) {
-
     return "Writing";
-
   }
 
 
@@ -1347,9 +952,7 @@ function getJobType(job) {
     /graphic designer|graphic design|canva designer/
       .test(text)
   ) {
-
     return "Graphic Design";
-
   }
 
 
@@ -1357,9 +960,7 @@ function getJobType(job) {
     /customer success|client success|customer experience/
       .test(text)
   ) {
-
     return "Customer Success";
-
   }
 
 
@@ -1367,9 +968,7 @@ function getJobType(job) {
     /account manager|account management/
       .test(text)
   ) {
-
     return "Account Management";
-
   }
 
 
@@ -1377,9 +976,7 @@ function getJobType(job) {
     /recruiter|recruitment|talent acquisition|human resources/
       .test(text)
   ) {
-
     return "Recruitment & HR";
-
   }
 
 
@@ -1387,9 +984,7 @@ function getJobType(job) {
     /bookkeeper|bookkeeping|accounting|finance/
       .test(text)
   ) {
-
     return "Finance";
-
   }
 
 
@@ -1397,9 +992,7 @@ function getJobType(job) {
     /ecommerce|e-commerce|shopify/
       .test(text)
   ) {
-
     return "E-commerce";
-
   }
 
 
@@ -1407,9 +1000,7 @@ function getJobType(job) {
     /research assistant|research analyst|research specialist/
       .test(text)
   ) {
-
     return "Research";
-
   }
 
 
@@ -1417,9 +1008,7 @@ function getJobType(job) {
     /online tutor|online teacher|tutor|teacher/
       .test(text)
   ) {
-
     return "Education";
-
   }
 
 
@@ -1427,9 +1016,7 @@ function getJobType(job) {
     /healthcare|medical writer|clinical research/
       .test(text)
   ) {
-
     return "Healthcare";
-
   }
 
 
@@ -1437,9 +1024,7 @@ function getJobType(job) {
     /project coordinator|project assistant|project manager/
       .test(text)
   ) {
-
     return "Project Management";
-
   }
 
 
@@ -1447,9 +1032,7 @@ function getJobType(job) {
     /web developer|frontend developer|front-end developer/
       .test(text)
   ) {
-
     return "Web Development";
-
   }
 
 
@@ -1457,20 +1040,17 @@ function getJobType(job) {
     /software developer|software engineer|programmer/
       .test(text)
   ) {
-
     return "Software Development";
-
   }
 
 
   return "Other Remote Job";
-
 }
 
 
-// ========================================
+// ============================================================
 // SALARY
-// ========================================
+// ============================================================
 
 function formatSalary(job) {
 
@@ -1487,7 +1067,6 @@ function formatSalary(job) {
   ) {
 
     return "Salary not specified";
-
   }
 
 
@@ -1502,7 +1081,6 @@ function formatSalary(job) {
 
     result +=
       ` - ${Number(max).toLocaleString()}`;
-
   }
 
 
@@ -1512,18 +1090,16 @@ function formatSalary(job) {
 
     result +=
       ` / ${job.salaryPeriod}`;
-
   }
 
 
   return result.trim();
-
 }
 
 
-// ========================================
+// ============================================================
 // FORMAT JOB
-// ========================================
+// ============================================================
 
 function formatJob(
   job,
@@ -1562,9 +1138,7 @@ function formatJob(
 
       location =
         `Remote — ${names.join(", ")}`;
-
     }
-
   }
 
 
@@ -1579,7 +1153,8 @@ function formatJob(
       `${job.companySlug || "company"}-${job.title || "job"}`,
 
     title:
-      job.title || "Remote Job",
+      job.title ||
+      "Remote Job",
 
     company:
       job.companyName ||
@@ -1698,13 +1273,12 @@ function formatJob(
       "Job data sourced from Himalayas"
 
   };
-
 }
 
 
-// ========================================
+// ============================================================
 // VISA JOBS
-// ========================================
+// ============================================================
 
 async function getVisaJobs(
   search = "",
@@ -1716,9 +1290,7 @@ async function getVisaJobs(
 
 
   const cached =
-    cache.get(
-      cacheKey
-    );
+    cache.get(cacheKey);
 
 
   if (
@@ -1728,7 +1300,6 @@ async function getVisaJobs(
   ) {
 
     return cached.data;
-
   }
 
 
@@ -1738,17 +1309,11 @@ async function getVisaJobs(
       : [
 
           "visa sponsorship",
-
           "visa sponsored",
-
           "work visa",
-
           "employer sponsorship",
-
           "work permit",
-
           "skilled worker",
-
           "sponsorship available"
 
         ];
@@ -1756,10 +1321,6 @@ async function getVisaJobs(
 
   const allJobs = [];
 
-
-  // IMPORTANT:
-  // Run sequentially instead of Promise.all
-  // to reduce rate-limit problems.
 
   for (
     const term of searches
@@ -1773,12 +1334,6 @@ async function getVisaJobs(
           search:
             term,
 
-          country:
-            "",
-
-          worldwide:
-            false,
-
           page
 
         });
@@ -1788,22 +1343,15 @@ async function getVisaJobs(
         ...result.jobs
       );
 
-
     } catch (error) {
 
       console.error(
-        `Visa search failed for ${term}:`,
+        `Visa search failed: ${term}`,
         error.message
       );
-
     }
-
   }
 
-
-  // ========================================
-  // DEDUPLICATE
-  // ========================================
 
   const seen =
     new Set();
@@ -1823,53 +1371,32 @@ async function getVisaJobs(
       ) {
 
         return false;
-
       }
 
 
       seen.add(key);
 
       return true;
-
     });
 
-
-  // ========================================
-  // VISA FILTER
-  // ========================================
 
   const strongVisa = [
 
     "visa sponsorship",
-
     "visa sponsored",
-
     "work visa sponsorship",
-
     "employer sponsorship",
-
     "employer sponsored",
-
     "work permit sponsorship",
-
     "work permit sponsored",
-
     "skilled worker sponsorship",
-
     "sponsorship available",
-
     "sponsor visa",
-
     "visa support",
-
     "immigration sponsorship",
-
     "will sponsor",
-
     "sponsor a work visa",
-
     "sponsorship provided",
-
     "visa assistance"
 
   ];
@@ -1878,23 +1405,14 @@ async function getVisaJobs(
   const negativeVisa = [
 
     "no visa sponsorship",
-
     "no sponsorship",
-
     "visa sponsorship not available",
-
     "visa sponsorship unavailable",
-
     "we do not sponsor",
-
     "we don't sponsor",
-
     "cannot sponsor",
-
     "can't sponsor",
-
     "unable to sponsor",
-
     "not able to sponsor"
 
   ];
@@ -1919,7 +1437,6 @@ async function getVisaJobs(
       ) {
 
         return false;
-
       }
 
 
@@ -1927,7 +1444,6 @@ async function getVisaJobs(
         term =>
           text.includes(term)
       );
-
     });
 
 
@@ -1957,25 +1473,334 @@ async function getVisaJobs(
   cache.set(
     cacheKey,
     {
-
-      time:
-        Date.now(),
-
-      data:
-        result
-
+      time: Date.now(),
+      data: result
     }
   );
 
 
   return result;
-
 }
 
 
-// ========================================
+// ============================================================
+// TELEGRAM HTML ESCAPE
+// ============================================================
+
+function telegramEscape(value = "") {
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+
+// ============================================================
+// TELEGRAM POST
+// ============================================================
+
+async function sendTelegramJob(job) {
+
+  if (
+    !TELEGRAM_BOT_TOKEN ||
+    !TELEGRAM_CHANNEL_ID
+  ) {
+
+    return {
+
+      success: false,
+
+      skipped: true,
+
+      reason:
+        "Telegram environment variables are missing"
+
+    };
+  }
+
+
+  const jobId =
+    String(job.id || "");
+
+
+  if (
+    telegramPostedJobs.has(jobId)
+  ) {
+
+    return {
+
+      success: true,
+
+      skipped: true,
+
+      reason:
+        "Already posted"
+
+    };
+  }
+
+
+  const title =
+    telegramEscape(
+      job.title
+    );
+
+
+  const company =
+    telegramEscape(
+      job.company
+    );
+
+
+  const location =
+    telegramEscape(
+      job.location
+    );
+
+
+  const salary =
+    telegramEscape(
+      job.salary
+    );
+
+
+  const type =
+    telegramEscape(
+      job.jobType
+    );
+
+
+  let message =
+
+`<b>🇳🇬 NEW REMOTE JOB</b>
+
+<b>${title}</b>
+
+🏢 <b>Company:</b> ${company}
+🌍 <b>Location:</b> ${location}
+💼 <b>Category:</b> ${type}
+💰 <b>Salary:</b> ${salary}`;
+
+
+  if (
+    job.employmentType
+  ) {
+
+    message +=
+      `\n📋 <b>Type:</b> ${telegramEscape(job.employmentType)}`;
+  }
+
+
+  if (
+    job.seniority
+  ) {
+
+    message +=
+      `\n🎯 <b>Level:</b> ${telegramEscape(job.seniority)}`;
+  }
+
+
+  message +=
+
+`
+
+🔗 <a href="${job.applyUrl || "https://himalayas.app/"}">APPLY FOR THIS JOB</a>
+
+📌 Source: Himalayas`;
+
+
+  // Telegram messages have a maximum length.
+  if (
+    message.length > 3900
+  ) {
+
+    message =
+      message.slice(
+        0,
+        3900
+      ) +
+      "\n\n🔗 Apply: " +
+      job.applyUrl;
+  }
+
+
+  const url =
+    `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+
+  const response =
+    await fetch(
+      url,
+      {
+
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body:
+          JSON.stringify({
+
+            chat_id:
+              TELEGRAM_CHANNEL_ID,
+
+            text:
+              message,
+
+            parse_mode:
+              "HTML",
+
+            disable_web_page_preview:
+              false
+
+          })
+
+      }
+    );
+
+
+  const data =
+    await response.json();
+
+
+  if (
+    !response.ok ||
+    !data.ok
+  ) {
+
+    throw new Error(
+      data?.description ||
+      `Telegram HTTP ${response.status}`
+    );
+  }
+
+
+  telegramPostedJobs.add(
+    jobId
+  );
+
+
+  return {
+
+    success: true,
+
+    messageId:
+      data?.result?.message_id || null
+
+  };
+}
+
+
+// ============================================================
+// POST JOBS TO TELEGRAM
+// ============================================================
+
+async function postJobsToTelegram(
+  jobs,
+  limit = 10
+) {
+
+  if (
+    !TELEGRAM_BOT_TOKEN ||
+    !TELEGRAM_CHANNEL_ID
+  ) {
+
+    return {
+
+      enabled: false,
+
+      posted: 0,
+
+      skipped: 0,
+
+      errors: []
+
+    };
+  }
+
+
+  let posted = 0;
+  let skipped = 0;
+
+  const errors = [];
+
+
+  for (
+    const job of jobs.slice(
+      0,
+      limit
+    )
+  ) {
+
+    try {
+
+      const result =
+        await sendTelegramJob(job);
+
+
+      if (
+        result.skipped
+      ) {
+
+        skipped++;
+
+      } else {
+
+        posted++;
+      }
+
+
+      // Small delay to avoid hammering Telegram.
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            1000
+          )
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Telegram post error:",
+        error.message
+      );
+
+
+      errors.push({
+
+        job:
+          job.title,
+
+        error:
+          error.message
+
+      });
+    }
+  }
+
+
+  return {
+
+    enabled: true,
+
+    posted,
+
+    skipped,
+
+    errors
+
+  };
+}
+
+
+// ============================================================
 // HOME
-// ========================================
+// ============================================================
 
 app.get(
   "/",
@@ -1983,8 +1808,7 @@ app.get(
 
     res.json({
 
-      success:
-        true,
+      success: true,
 
       status:
         "online",
@@ -2000,6 +1824,12 @@ app.get(
           ? "enabled"
           : "disabled",
 
+      telegram:
+        TELEGRAM_BOT_TOKEN &&
+        TELEGRAM_CHANNEL_ID
+          ? "enabled"
+          : "disabled",
+
       endpoints: {
 
         remote:
@@ -2012,26 +1842,31 @@ app.get(
           "/api/jobs/visa",
 
         debug:
-          "/api/jobs/remote/debug"
+          "/api/jobs/remote/debug",
+
+        test:
+          "/api/test-himalayas",
+
+        telegramTest:
+          "/api/telegram/test",
+
+        telegramPost:
+          "/api/telegram/post"
 
       }
 
     });
-
   }
 );
 
 
-// ========================================
-// REMOTE
-// ========================================
+// ============================================================
+// REMOTE JOBS
+// ============================================================
 
 app.get(
   "/api/jobs/remote",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
 
     try {
 
@@ -2060,8 +1895,7 @@ app.get(
 
       res.json({
 
-        success:
-          true,
+        success: true,
 
         type:
           "international-remote",
@@ -2094,8 +1928,7 @@ app.get(
 
       res.status(500).json({
 
-        success:
-          false,
+        success: false,
 
         error:
           "Failed to fetch jobs",
@@ -2104,23 +1937,18 @@ app.get(
           error.message
 
       });
-
     }
-
   }
 );
 
 
-// ========================================
+// ============================================================
 // VISA
-// ========================================
+// ============================================================
 
 app.get(
   "/api/jobs/visa",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
 
     try {
 
@@ -2149,8 +1977,7 @@ app.get(
 
       res.json({
 
-        success:
-          true,
+        success: true,
 
         type:
           "visa-sponsorship",
@@ -2177,8 +2004,7 @@ app.get(
 
       res.status(500).json({
 
-        success:
-          false,
+        success: false,
 
         error:
           "Failed to fetch visa jobs",
@@ -2187,23 +2013,89 @@ app.get(
           error.message
 
       });
-
     }
-
   }
 );
 
 
-// ========================================
+// ============================================================
+// HIMALAYAS TEST
+// ============================================================
+
+app.get(
+  "/api/test-himalayas",
+  async (req, res) => {
+
+    try {
+
+      const result =
+        await searchHimalayas({
+
+          country:
+            "NG",
+
+          page:
+            1
+
+        });
+
+
+      res.json({
+
+        success: true,
+
+        total:
+          result.totalCount,
+
+        returned:
+          result.jobs.length,
+
+        jobs:
+          result.jobs
+            .slice(0, 10)
+            .map(job => ({
+
+              title:
+                job.title,
+
+              company:
+                job.companyName,
+
+              location:
+                job.locationRestrictions,
+
+              application:
+                job.applicationLink,
+
+              guid:
+                job.guid
+
+            }))
+
+      });
+
+    } catch (error) {
+
+      res.status(500).json({
+
+        success: false,
+
+        error:
+          error.message
+
+      });
+    }
+  }
+);
+
+
+// ============================================================
 // DEBUG
-// ========================================
+// ============================================================
 
 app.get(
   "/api/jobs/remote/debug",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
 
     try {
 
@@ -2213,7 +2105,6 @@ app.get(
         ).trim();
 
 
-      // Get raw Nigeria results
       const nigeria =
         await searchHimalayas({
 
@@ -2222,23 +2113,16 @@ app.get(
           country:
             "NG",
 
-          worldwide:
-            false,
-
           page:
             1
 
         });
 
 
-      // Get raw worldwide results
       const worldwide =
         await searchHimalayas({
 
           search,
-
-          country:
-            "",
 
           worldwide:
             true,
@@ -2249,62 +2133,9 @@ app.get(
         });
 
 
-      const nigeriaChecks =
-        nigeria.jobs.map(
-          job => ({
-
-            title:
-              job.title,
-
-            company:
-              job.companyName,
-
-            locationRestrictions:
-              job.locationRestrictions,
-
-            nigeria:
-              isNigeriaEligible(job),
-
-            remote:
-              isRemote(job),
-
-            foreignOnly:
-              isForeignOnly(job)
-
-          })
-        );
-
-
-      const worldwideChecks =
-        worldwide.jobs.map(
-          job => ({
-
-            title:
-              job.title,
-
-            company:
-              job.companyName,
-
-            locationRestrictions:
-              job.locationRestrictions,
-
-            nigeria:
-              isNigeriaEligible(job),
-
-            remote:
-              isRemote(job),
-
-            foreignOnly:
-              isForeignOnly(job)
-
-          })
-        );
-
-
       res.json({
 
-        success:
-          true,
+        success: true,
 
         search,
 
@@ -2320,16 +2151,36 @@ app.get(
         worldwideTotal:
           worldwide.totalCount,
 
-        hunterEnabled:
-          Boolean(
-            process.env.HUNTER_API_KEY
-          ),
+        jobs: [
 
-        nigeriaJobs:
-          nigeriaChecks,
+          ...nigeria.jobs,
 
-        worldwideJobs:
-          worldwideChecks
+          ...worldwide.jobs
+
+        ].slice(0, 50).map(job => ({
+
+          title:
+            job.title,
+
+          company:
+            job.companyName,
+
+          locations:
+            job.locationRestrictions,
+
+          nigeria:
+            isNigeriaEligible(job),
+
+          remote:
+            isRemote(job),
+
+          foreignOnly:
+            isForeignOnly(job),
+
+          application:
+            job.applicationLink
+
+        }))
 
       });
 
@@ -2337,83 +2188,108 @@ app.get(
 
       res.status(500).json({
 
-        success:
-          false,
+        success: false,
 
         error:
           error.message
 
       });
-
     }
-
   }
 );
 
 
-// ========================================
-// TEST HIMALAYAS
-// ========================================
+// ============================================================
+// TELEGRAM TEST
+// ============================================================
 
 app.get(
-  "/api/test-himalayas",
-  async (
-    req,
-    res
-  ) => {
+  "/api/telegram/test",
+  async (req, res) => {
 
     try {
 
-      const result =
-        await searchHimalayas({
+      if (
+        !TELEGRAM_BOT_TOKEN
+      ) {
 
-          search:
-            "",
+        return res.status(400).json({
 
-          country:
-            "NG",
+          success: false,
 
-          worldwide:
-            false,
-
-          page:
-            1
+          error:
+            "TELEGRAM_BOT_TOKEN is missing"
 
         });
+      }
+
+
+      if (
+        !TELEGRAM_CHANNEL_ID
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          error:
+            "TELEGRAM_CHANNEL_ID is missing"
+
+        });
+      }
+
+
+      const url =
+        `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/getMe`;
+
+
+      const response =
+        await fetch(url);
+
+
+      const data =
+        await response.json();
+
+
+      if (
+        !response.ok ||
+        !data.ok
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          error:
+            data.description ||
+            "Telegram bot test failed"
+
+        });
+      }
 
 
       res.json({
 
-        success:
-          true,
+        success: true,
 
-        total:
-          result.totalCount,
+        message:
+          "Telegram bot token is working",
 
-        returned:
-          result.jobs.length,
+        bot: {
 
-        jobs:
-          result.jobs.slice(
-            0,
-            10
-          ).map(
-            job => ({
+          id:
+            data.result.id,
 
-              title:
-                job.title,
+          username:
+            data.result.username,
 
-              company:
-                job.companyName,
+          name:
+            data.result.first_name
 
-              location:
-                job.locationRestrictions,
+        },
 
-              application:
-                job.applicationLink
-
-            })
-          )
+        channel:
+          TELEGRAM_CHANNEL_ID
 
       });
 
@@ -2421,23 +2297,132 @@ app.get(
 
       res.status(500).json({
 
-        success:
-          false,
+        success: false,
 
         error:
           error.message
 
       });
-
     }
-
   }
 );
 
 
-// ========================================
+// ============================================================
+// MANUAL TELEGRAM POST
+// ============================================================
+
+app.get(
+  "/api/telegram/post",
+  async (req, res) => {
+
+    try {
+
+      const result =
+        await getRemoteJobs(
+          "",
+          1
+        );
+
+
+      const telegram =
+        await postJobsToTelegram(
+          result.jobs,
+          10
+        );
+
+
+      res.json({
+
+        success: true,
+
+        jobsFound:
+          result.jobs.length,
+
+        telegram
+
+      });
+
+    } catch (error) {
+
+      res.status(500).json({
+
+        success: false,
+
+        error:
+          error.message
+
+      });
+    }
+  }
+);
+
+
+// ============================================================
+// AUTOMATIC TELEGRAM JOB CHECK
+//
+// Checks every 6 hours while the Render process is running.
+// ============================================================
+
+async function automaticTelegramCheck() {
+
+  if (
+    !TELEGRAM_BOT_TOKEN ||
+    !TELEGRAM_CHANNEL_ID
+  ) {
+
+    console.log(
+      "Telegram automatic posting: DISABLED"
+    );
+
+    return;
+  }
+
+
+  try {
+
+    console.log(
+      "Checking jobs for Telegram..."
+    );
+
+
+    const result =
+      await getRemoteJobs(
+        "",
+        1
+      );
+
+
+    console.log(
+      `Telegram job check found ${result.jobs.length} jobs`
+    );
+
+
+    const telegram =
+      await postJobsToTelegram(
+        result.jobs,
+        10
+      );
+
+
+    console.log(
+      "Telegram result:",
+      telegram
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Automatic Telegram check failed:",
+      error.message
+    );
+  }
+}
+
+
+// ============================================================
 // START
-// ========================================
+// ============================================================
 
 app.listen(
   PORT,
@@ -2447,12 +2432,37 @@ app.listen(
       `Server running on port ${PORT}`
     );
 
+
     console.log(
       `Hunter: ${
         process.env.HUNTER_API_KEY
           ? "ENABLED"
           : "DISABLED"
       }`
+    );
+
+
+    console.log(
+      `Telegram: ${
+        TELEGRAM_BOT_TOKEN &&
+        TELEGRAM_CHANNEL_ID
+          ? "ENABLED"
+          : "DISABLED"
+      }`
+    );
+
+
+    // Start Telegram check after server starts.
+    setTimeout(
+      automaticTelegramCheck,
+      5000
+    );
+
+
+    // Check every 6 hours.
+    setInterval(
+      automaticTelegramCheck,
+      6 * 60 * 60 * 1000
     );
 
   }

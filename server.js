@@ -9,7 +9,6 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-
 /*
 ========================================
 MIDDLEWARE
@@ -17,7 +16,6 @@ MIDDLEWARE
 */
 
 app.use(cors());
-
 app.use(express.json());
 
 
@@ -47,13 +45,9 @@ HEALTH CHECK
 */
 
 app.get("/health", (req, res) => {
-
   res.json({
-
     success: true,
-
-    message:
-      "JobFinder backend is running",
+    message: "JobFinder backend is running",
 
     adzunaConfigured:
       Boolean(
@@ -66,9 +60,7 @@ app.get("/health", (req, res) => {
         TELEGRAM_BOT_TOKEN &&
         TELEGRAM_CHANNEL_ID
       )
-
   });
-
 });
 
 
@@ -88,12 +80,12 @@ const INTERNATIONAL_COUNTRIES = [
 
 /*
 ========================================
-SEARCH ADZUNA
+ADZUNA SEARCH
 ========================================
 */
 
 async function getJobs(
-  country = "gb",
+  country,
   keyword = "jobs",
   location = "",
   page = 1
@@ -107,7 +99,6 @@ async function getJobs(
     throw new Error(
       "Adzuna API credentials are missing."
     );
-
   }
 
 
@@ -121,7 +112,6 @@ async function getJobs(
       await axios.get(
         url,
         {
-
           params: {
 
             app_id:
@@ -131,7 +121,7 @@ async function getJobs(
               ADZUNA_APP_KEY,
 
             results_per_page:
-              50,
+              20,
 
             what:
               keyword,
@@ -142,13 +132,16 @@ async function getJobs(
             sort_by:
               "date",
 
-            content_type:
+            "content-type":
               "application/json"
-
           },
 
-          timeout: 30000
+          timeout: 20000,
 
+          headers: {
+            Accept:
+              "application/json"
+          }
         }
       );
 
@@ -158,19 +151,16 @@ async function getJobs(
       []
     );
 
-
   } catch (error) {
 
     console.error(
-      `Adzuna ${country} request failed:`,
+      `Adzuna ${country} failed:`,
       error.response?.data ||
       error.message
     );
 
     return [];
-
   }
-
 }
 
 
@@ -185,11 +175,8 @@ function cleanDescription(
 ) {
 
   if (!description) {
-
     return "";
-
   }
-
 
   return String(description)
 
@@ -209,18 +196,27 @@ function cleanDescription(
     )
 
     .replace(
+      /&quot;/gi,
+      '"'
+    )
+
+    .replace(
+      /&#39;/gi,
+      "'"
+    )
+
+    .replace(
       /\s+/g,
       " "
     )
 
     .trim();
-
 }
 
 
 /*
 ========================================
-REMOTE JOB DETECTION
+REMOTE DETECTION
 ========================================
 */
 
@@ -263,9 +259,13 @@ function isRemoteJob(job) {
 
     "virtual position",
 
+    "virtual job",
+
     "telecommute",
 
-    "telecommuting"
+    "telecommuting",
+
+    "anywhere"
 
   ];
 
@@ -274,7 +274,6 @@ function isRemoteJob(job) {
     word =>
       text.includes(word)
   );
-
 }
 
 
@@ -284,9 +283,7 @@ VISA SPONSORSHIP DETECTION
 ========================================
 */
 
-function hasVisaSponsorship(
-  job
-) {
+function hasVisaSponsorship(job) {
 
   const text = (
 
@@ -297,7 +294,7 @@ function hasVisaSponsorship(
   ).toLowerCase();
 
 
-  const sponsorshipWords = [
+  const visaWords = [
 
     "visa sponsorship",
 
@@ -331,16 +328,74 @@ function hasVisaSponsorship(
 
     "international candidates",
 
-    "overseas candidates"
+    "overseas candidates",
+
+    "visa support"
 
   ];
 
 
-  return sponsorshipWords.some(
+  return visaWords.some(
     word =>
       text.includes(word)
   );
+}
 
+
+/*
+========================================
+SCHOLARSHIP DETECTION
+========================================
+*/
+
+function isScholarship(job) {
+
+  const text = (
+
+    `${job.title || ""} ` +
+
+    `${job.description || ""}`
+
+  ).toLowerCase();
+
+
+  const words = [
+
+    "scholarship",
+
+    "scholarships",
+
+    "fully funded",
+
+    "fully-funded",
+
+    "funded scholarship",
+
+    "student funding",
+
+    "study grant",
+
+    "education grant",
+
+    "fellowship",
+
+    "fellowships",
+
+    "studentship",
+
+    "phd funding",
+
+    "masters funding",
+
+    "research funding"
+
+  ];
+
+
+  return words.some(
+    word =>
+      text.includes(word)
+  );
 }
 
 
@@ -358,6 +413,11 @@ function formatJob(job) {
     );
 
 
+  const location =
+    job.location?.display_name ||
+    "Location not specified";
+
+
   const remote =
     isRemoteJob({
 
@@ -365,11 +425,10 @@ function formatJob(job) {
         job.title,
 
       location:
-        job.location?.display_name,
+        location,
 
       description:
         description
-
     });
 
 
@@ -381,231 +440,112 @@ function formatJob(job) {
 
       description:
         description
-
     });
+
+
+  const scholarship =
+    isScholarship({
+
+      title:
+        job.title,
+
+      description:
+        description
+    });
+
+
+  let salary =
+    "Salary not specified";
+
+
+  if (
+    job.salary_min &&
+    job.salary_max
+  ) {
+
+    salary =
+      `${job.salary_min} - ${job.salary_max}`;
+
+  } else if (
+    job.salary_min
+  ) {
+
+    salary =
+      `${job.salary_min}+`;
+
+  } else if (
+    job.salary_max
+  ) {
+
+    salary =
+      `Up to ${job.salary_max}`;
+  }
 
 
   return {
 
-    id: String(
-
-      job.id ||
-
-      `${
-
-        job.title ||
-
-        "job"
-
-      }-${
-
-        job.created ||
-
-        Date.now()
-
-      }`
-
-    ),
-
+    id:
+      String(
+        job.id ||
+        `${job.title}-${job.created}`
+      ),
 
     title:
       job.title ||
       "Job Opportunity",
 
-
     company:
       job.company?.display_name ||
       "Company",
 
-
     location:
-      job.location?.display_name ||
-      "Location not specified",
-
+      location,
 
     description:
       description ||
       "No description available.",
 
-
     salary:
-
-      job.salary_min ||
-
-      job.salary_max
-
-        ? `${
-
-            job.salary_min
-              ? job.salary_min
-              : ""
-
-          }${
-
-            job.salary_min ||
-            job.salary_max
-              ? " - "
-              : ""
-
-          }${
-
-            job.salary_max
-              ? job.salary_max
-              : ""
-
-          }`
-
-        : "Salary not specified",
-
+      salary,
 
     type:
       job.contract_type ||
       job.contract_time ||
-      "Full-time",
-
+      "Job",
 
     url:
       job.redirect_url ||
       "",
 
-
     created:
       job.created ||
       null,
 
-
     remote:
       remote,
 
-
     visaSponsorship:
-      visaSponsorship
+      visaSponsorship,
 
-  };
+    scholarship:
+      scholarship,
 
-}
-
-
-/*
-========================================
-JOB SCORE
-========================================
-
-Higher score = appears first
-========================================
-*/
-
-function calculateJobScore(
-  job
-) {
-
-  let score = 0;
-
-
-  // Remote jobs get high priority
-  if (job.remote) {
-
-    score += 100;
-
-  }
-
-
-  // Visa sponsorship gets high priority
-  if (
-    job.visaSponsorship
-  ) {
-
-    score += 100;
-
-  }
-
-
-  // Remote + sponsorship
-  if (
-    job.remote &&
-    job.visaSponsorship
-  ) {
-
-    score += 100;
-
-  }
-
-
-  // Nigeria jobs
-  const location =
-    (
-      job.location ||
+    category:
+      job.category?.label ||
       ""
-    ).toLowerCase();
-
-
-  if (
-    location.includes(
-      "nigeria"
-    )
-  ) {
-
-    score += 80;
-
-  }
-
-
-  // Recent jobs
-  if (job.created) {
-
-    const createdDate =
-      new Date(
-        job.created
-      );
-
-    const age =
-      Date.now() -
-      createdDate.getTime();
-
-
-    const days =
-      age /
-      (
-        1000 *
-        60 *
-        60 *
-        24
-      );
-
-
-    if (days <= 1) {
-
-      score += 30;
-
-    } else if (days <= 3) {
-
-      score += 20;
-
-    } else if (days <= 7) {
-
-      score += 10;
-
-    }
-
-  }
-
-
-  return score;
-
+  };
 }
 
 
 /*
 ========================================
-REMOVE DUPLICATES
+DUPLICATE REMOVAL
 ========================================
 */
 
-function removeDuplicates(
-  jobs
-) {
+function removeDuplicates(jobs) {
 
-  const uniqueJobs = [];
+  const unique = [];
 
   const seen =
     new Set();
@@ -617,20 +557,7 @@ function removeDuplicates(
 
     const key =
       job.url ||
-
-      `${
-
-        job.title
-
-      }-${
-
-        job.company
-
-      }-${
-
-        job.location
-
-      }`;
+      `${job.title}-${job.company}-${job.location}`;
 
 
     if (
@@ -638,25 +565,50 @@ function removeDuplicates(
     ) {
 
       continue;
-
     }
 
 
     seen.add(key);
 
-    uniqueJobs.push(job);
-
+    unique.push(job);
   }
 
 
-  return uniqueJobs;
-
+  return unique;
 }
 
 
 /*
 ========================================
-FETCH NIGERIA JOBS
+SORT JOBS
+========================================
+*/
+
+function sortJobs(jobs) {
+
+  return jobs.sort(
+    (a, b) => {
+
+      const dateA =
+        a.created
+          ? new Date(a.created).getTime()
+          : 0;
+
+      const dateB =
+        b.created
+          ? new Date(b.created).getTime()
+          : 0;
+
+
+      return dateB - dateA;
+    }
+  );
+}
+
+
+/*
+========================================
+SEARCH NIGERIA
 ========================================
 */
 
@@ -676,13 +628,73 @@ async function getNigeriaJobs(
   return jobs.map(
     formatJob
   );
-
 }
 
 
 /*
 ========================================
-FETCH REMOTE JOBS
+SEARCH NIGERIA REMOTE
+========================================
+*/
+
+async function getNigeriaRemoteJobs(
+  search
+) {
+
+  const searches = [
+
+    `${search} remote`,
+
+    `${search} work from home`,
+
+    `remote ${search}`
+
+  ];
+
+
+  let allJobs = [];
+
+
+  for (
+    const keyword
+    of searches
+  ) {
+
+    const jobs =
+      await getJobs(
+        "ng",
+        keyword,
+        "",
+        1
+      );
+
+
+    allJobs.push(
+      ...jobs.map(
+        formatJob
+      )
+    );
+  }
+
+
+  /*
+  Do NOT throw away jobs just because
+  Adzuna's description doesn't contain
+  the word remote.
+
+  The search itself already requested
+  remote jobs.
+  */
+
+  return removeDuplicates(
+    allJobs
+  );
+}
+
+
+/*
+========================================
+SEARCH REMOTE INTERNATIONAL
 ========================================
 */
 
@@ -696,9 +708,7 @@ async function getRemoteJobs(
 
     `remote ${search}`,
 
-    `${search} work from home`,
-
-    `${search} remote visa sponsorship`
+    `${search} work from home`
 
   ];
 
@@ -730,23 +740,29 @@ async function getRemoteJobs(
           formatJob
         )
       );
-
     }
-
   }
 
 
-  return allJobs.filter(
-    job =>
-      job.remote
-  );
+  /*
+  Important:
 
+  We do not filter with
+  job.remote here.
+
+  Adzuna already received
+  "remote" in the search.
+  */
+
+  return removeDuplicates(
+    allJobs
+  );
 }
 
 
 /*
 ========================================
-FETCH VISA SPONSORSHIP JOBS
+VISA SPONSORSHIP JOBS
 ========================================
 */
 
@@ -762,7 +778,7 @@ async function getVisaJobs(
 
     `${search} work visa`,
 
-    `${search} relocation sponsorship`
+    `${search} relocation`
 
   ];
 
@@ -793,19 +809,127 @@ async function getVisaJobs(
         ...jobs.map(
           formatJob
         )
-
       );
-
     }
-
   }
 
 
-  return allJobs.filter(
-    job =>
-      job.visaSponsorship
+  return removeDuplicates(
+    allJobs
   );
+}
 
+
+/*
+========================================
+SCHOLARSHIPS
+========================================
+
+NOTE:
+
+Adzuna is primarily a job-ad API.
+We search scholarship/fellowship
+terms here, but this is NOT a dedicated
+scholarship database.
+
+A separate scholarship source can
+be added later.
+========================================
+*/
+
+async function getScholarships(
+  search
+) {
+
+  const searches = [
+
+    `${search} scholarship`,
+
+    `${search} fellowship`,
+
+    `${search} fully funded`,
+
+    `${search} studentship`
+
+  ];
+
+
+  let allJobs = [];
+
+
+  for (
+    const country
+    of INTERNATIONAL_COUNTRIES
+  ) {
+
+    for (
+      const keyword
+      of searches
+    ) {
+
+      const jobs =
+        await getJobs(
+          country,
+          keyword,
+          "",
+          1
+        );
+
+
+      allJobs.push(
+        ...jobs.map(
+          formatJob
+        )
+      );
+    }
+  }
+
+
+  return removeDuplicates(
+    allJobs
+  );
+}
+
+
+/*
+========================================
+INTERNATIONAL JOBS
+========================================
+*/
+
+async function getInternationalJobs(
+  search,
+  location = ""
+) {
+
+  let allJobs = [];
+
+
+  for (
+    const country
+    of INTERNATIONAL_COUNTRIES
+  ) {
+
+    const jobs =
+      await getJobs(
+        country,
+        search,
+        location,
+        1
+      );
+
+
+    allJobs.push(
+      ...jobs.map(
+        formatJob
+      )
+    );
+  }
+
+
+  return removeDuplicates(
+    allJobs
+  );
 }
 
 
@@ -839,19 +963,58 @@ app.get(
         String(
           req.query.type ||
           "all"
-        ).toLowerCase();
+        )
+        .trim()
+        .toLowerCase();
 
 
       let jobs = [];
 
 
       /*
-      ========================================
-      NIGERIA
-      ========================================
+      ====================================
+      ALL
+      ====================================
       */
 
       if (
+        type === "all"
+      ) {
+
+        /*
+        Use a small number of searches
+        so the API is not overloaded.
+        */
+
+        const nigeria =
+          await getNigeriaJobs(
+            search
+          );
+
+
+        const remote =
+          await getRemoteJobs(
+            search
+          );
+
+
+        jobs = [
+
+          ...nigeria,
+
+          ...remote
+
+        ];
+      }
+
+
+      /*
+      ====================================
+      NIGERIA
+      ====================================
+      */
+
+      else if (
         type === "nigeria"
       ) {
 
@@ -859,14 +1022,31 @@ app.get(
           await getNigeriaJobs(
             search
           );
-
       }
 
 
       /*
-      ========================================
+      ====================================
+      NIGERIA REMOTE
+      ====================================
+      */
+
+      else if (
+        type === "nigeria-remote" ||
+        type === "nigeria_remote"
+      ) {
+
+        jobs =
+          await getNigeriaRemoteJobs(
+            search
+          );
+      }
+
+
+      /*
+      ====================================
       REMOTE
-      ========================================
+      ====================================
       */
 
       else if (
@@ -877,122 +1057,91 @@ app.get(
           await getRemoteJobs(
             search
           );
-
       }
 
 
       /*
-      ========================================
-      VISA SPONSORSHIP
-      ========================================
+      ====================================
+      VISA
+      ====================================
       */
 
       else if (
-        type ===
-        "visa"
+        type === "visa" ||
+        type === "sponsorship"
       ) {
 
         jobs =
           await getVisaJobs(
             search
           );
-
       }
 
 
       /*
-      ========================================
-      INTERNATIONAL
-      ========================================
+      ====================================
+      SCHOLARSHIPS
+      ====================================
       */
 
       else if (
-        type ===
-        "international"
+        type === "scholarship" ||
+        type === "scholarships"
       ) {
 
-        for (
-          const country
-          of INTERNATIONAL_COUNTRIES
-        ) {
-
-          const results =
-            await getJobs(
-              country,
-              search,
-              location,
-              1
-            );
-
-
-          jobs.push(
-            ...results.map(
-              formatJob
-            )
+        jobs =
+          await getScholarships(
+            search
           );
-
-        }
-
       }
 
 
       /*
-      ========================================
-      ALL JOBS
-      ========================================
+      ====================================
+      INTERNATIONAL
+      ====================================
+      */
+
+      else if (
+        type === "international"
+      ) {
+
+        jobs =
+          await getInternationalJobs(
+            search,
+            location
+          );
+      }
+
+
+      /*
+      ====================================
+      UNKNOWN TYPE
+      ====================================
       */
 
       else {
 
-        // Nigeria jobs
-        const nigeria =
-          await getNigeriaJobs(
-            search
+        jobs =
+          await getInternationalJobs(
+            search,
+            location
           );
-
-
-        jobs.push(
-          ...nigeria
-        );
-
-
-        // Remote jobs
-        const remote =
-          await getRemoteJobs(
-            search
-          );
-
-
-        jobs.push(
-          ...remote
-        );
-
-
-        // Visa sponsorship jobs
-        const visa =
-          await getVisaJobs(
-            search
-          );
-
-
-        jobs.push(
-          ...visa
-        );
-
       }
 
 
       /*
-      ========================================
+      ====================================
       LOCATION FILTER
-      ========================================
+      ====================================
       */
 
       if (
-        location
+        location &&
+        type !== "international"
       ) {
 
-        const locationText =
+        const wantedLocation =
           location.toLowerCase();
 
 
@@ -1007,20 +1156,51 @@ app.get(
                 ).toLowerCase();
 
 
-              return jobLocation.includes(
-                locationText
-              );
+              const description =
+                (
+                  job.description ||
+                  ""
+                ).toLowerCase();
 
+
+              /*
+              For remote searches,
+              allow remote jobs even when
+              their physical location is
+              not the requested location.
+              */
+
+              if (
+                job.remote &&
+                (
+                  type === "remote" ||
+                  type === "nigeria-remote" ||
+                  type === "nigeria_remote"
+                )
+              ) {
+
+                return true;
+              }
+
+
+              return (
+                jobLocation.includes(
+                  wantedLocation
+                ) ||
+
+                description.includes(
+                  wantedLocation
+                )
+              );
             }
           );
-
       }
 
 
       /*
-      ========================================
+      ====================================
       REMOVE DUPLICATES
-      ========================================
+      ====================================
       */
 
       jobs =
@@ -1030,30 +1210,21 @@ app.get(
 
 
       /*
-      ========================================
-      SORT JOBS
-      ========================================
+      ====================================
+      SORT
+      ====================================
       */
 
-      jobs.sort(
-        (
-          a,
-          b
-        ) => {
-
-          return (
-            calculateJobScore(b) -
-            calculateJobScore(a)
-          );
-
-        }
-      );
+      jobs =
+        sortJobs(
+          jobs
+        );
 
 
       /*
-      ========================================
-      LIMIT RESULTS
-      ========================================
+      ====================================
+      LIMIT
+      ====================================
       */
 
       jobs =
@@ -1064,9 +1235,9 @@ app.get(
 
 
       /*
-      ========================================
+      ====================================
       RESPONSE
-      ========================================
+      ====================================
       */
 
       res.json({
@@ -1079,7 +1250,6 @@ app.get(
         jobs
 
       });
-
 
     } catch (error) {
 
@@ -1096,22 +1266,22 @@ app.get(
         success: false,
 
         message:
-          error.message ||
           "Unable to fetch jobs.",
+
+        error:
+          error.message,
 
         jobs: []
 
       });
-
     }
-
   }
 );
 
 
 /*
 ========================================
-TELEGRAM POST
+TELEGRAM
 ========================================
 */
 
@@ -1129,11 +1299,12 @@ async function postToTelegram(
     );
 
     return false;
-
   }
 
 
-  if (!job.url) {
+  if (
+    !job.url
+  ) {
 
     console.log(
       "Job has no application URL:",
@@ -1141,7 +1312,6 @@ async function postToTelegram(
     );
 
     return false;
-
   }
 
 
@@ -1153,6 +1323,10 @@ async function postToTelegram(
 
     job.visaSponsorship
       ? "✈️ VISA SPONSORSHIP"
+      : "",
+
+    job.scholarship
+      ? "🎓 SCHOLARSHIP"
       : ""
 
   ]
@@ -1168,7 +1342,7 @@ async function postToTelegram(
 
   const message =
 
-`🚨 NEW JOB OPPORTUNITY
+`🚨 NEW OPPORTUNITY
 
 ${badges}
 
@@ -1185,10 +1359,10 @@ ${badges}
   500
 )}
 
-🔗 APPLY HERE:
+🔗 APPLY / VIEW:
 ${job.url}
 
-#Jobs #JobOpportunity #NigeriaJobs #RemoteJobs #VisaSponsorship`;
+#Jobs #JobOpportunity #NigeriaJobs #RemoteJobs #VisaSponsorship #Scholarships`;
 
 
   try {
@@ -1198,9 +1372,7 @@ ${job.url}
 
 
     await axios.post(
-
       telegramURL,
-
       {
 
         chat_id:
@@ -1211,16 +1383,11 @@ ${job.url}
 
         disable_web_page_preview:
           false
-
       },
-
       {
-
         timeout:
           15000
-
       }
-
     );
 
 
@@ -1232,7 +1399,6 @@ ${job.url}
 
     return true;
 
-
   } catch (error) {
 
     console.error(
@@ -1243,15 +1409,13 @@ ${job.url}
 
 
     return false;
-
   }
-
 }
 
 
 /*
 ========================================
-TEMPORARY DUPLICATE MEMORY
+TEMPORARY POST MEMORY
 ========================================
 */
 
@@ -1261,7 +1425,7 @@ const postedJobs =
 
 /*
 ========================================
-AUTOMATIC TELEGRAM JOB POSTING
+AUTOMATIC TELEGRAM POSTING
 ========================================
 */
 
@@ -1274,20 +1438,26 @@ async function fetchAndPostJobs() {
 
   try {
 
-    const jobs =
+    const nigeria =
+      await getNigeriaJobs(
+        "jobs"
+      );
+
+
+    const nigeriaRemote =
+      await getNigeriaRemoteJobs(
+        "jobs"
+      );
+
+
+    const remote =
       await getRemoteJobs(
         "jobs"
       );
 
 
-    const visaJobs =
+    const visa =
       await getVisaJobs(
-        "jobs"
-      );
-
-
-    const nigeriaJobs =
-      await getNigeriaJobs(
         "jobs"
       );
 
@@ -1295,34 +1465,48 @@ async function fetchAndPostJobs() {
     const allJobs =
       removeDuplicates([
 
-        ...jobs,
+        ...nigeria,
 
-        ...visaJobs,
+        ...nigeriaRemote,
 
-        ...nigeriaJobs
+        ...remote,
+
+        ...visa
 
       ]);
 
 
-    allJobs.sort(
-      (
-        a,
-        b
-      ) =>
-        calculateJobScore(b) -
-        calculateJobScore(a)
-    );
+    const sorted =
+      sortJobs(
+        allJobs
+      );
 
 
     console.log(
-      `Found ${allJobs.length} jobs.`
+      `Found ${sorted.length} jobs.`
     );
+
+
+    /*
+    Only post the first 10 new jobs
+    during each check.
+    */
+
+    let postedCount = 0;
 
 
     for (
       const job
-      of allJobs
+      of sorted
     ) {
+
+      if (
+        postedCount >= 10
+      ) {
+
+        break;
+      }
+
 
       if (
         postedJobs.has(
@@ -1331,7 +1515,6 @@ async function fetchAndPostJobs() {
       ) {
 
         continue;
-
       }
 
 
@@ -1341,16 +1524,17 @@ async function fetchAndPostJobs() {
         );
 
 
-      if (posted) {
+      if (
+        posted
+      ) {
 
         postedJobs.add(
           job.id
         );
 
+        postedCount++;
       }
-
     }
-
 
   } catch (error) {
 
@@ -1358,20 +1542,17 @@ async function fetchAndPostJobs() {
       "Automatic job fetch failed:",
       error.message
     );
-
   }
-
 }
 
 
 /*
 ========================================
-AUTOMATIC POSTING
+AUTOMATIC POSTING DISABLED
 ========================================
 
-DISABLED FOR NOW.
-
-Enable only after testing Telegram.
+KEEP DISABLED UNTIL TELEGRAM
+HAS BEEN TESTED.
 ========================================
 */
 

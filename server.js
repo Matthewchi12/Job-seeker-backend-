@@ -1,3 +1,8 @@
+// ========================================
+// NIGERIA-FRIENDLY REMOTE JOBS BACKEND
+// HIMALAYAS API
+// ========================================
+
 const express = require("express");
 const cors = require("cors");
 
@@ -9,33 +14,17 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 
 
-/*
-========================================
-HIMALAYAS API
-========================================
-
-FREE
-NO API KEY
-NO SIGN UP REQUIRED
-========================================
-*/
+// ========================================
+// HIMALAYAS API
+// ========================================
 
 const HIMALAYAS_API =
   "https://himalayas.app/jobs/api/search";
 
 
-/*
-========================================
-CACHE
-========================================
-
-Himalayas data is refreshed daily.
-We cache results so your website does
-not repeatedly hit the API.
-
-Cache: 30 minutes
-========================================
-*/
+// ========================================
+// CACHE
+// ========================================
 
 const cache = new Map();
 
@@ -43,35 +32,154 @@ const CACHE_TIME =
   30 * 60 * 1000;
 
 
-/*
-========================================
-CLEAN HTML
-========================================
-*/
+// ========================================
+// REMOTE JOB CATEGORIES
+// ========================================
+//
+// These searches are intentionally broad.
+// The goal is NOT to return only tech jobs.
+//
+// ========================================
+
+const JOB_SEARCHES = [
+
+  // Technology
+  "software",
+  "IT",
+  "developer",
+
+  // Customer service
+  "customer service",
+  "customer support",
+  "technical support",
+
+  // Virtual assistance / administration
+  "virtual assistant",
+  "administrative",
+  "operations",
+  "data entry",
+
+  // Data / AI
+  "data",
+  "data annotation",
+  "AI",
+
+  // Writing / communication
+  "writer",
+  "content",
+  "copywriter",
+
+  // Marketing / sales
+  "marketing",
+  "social media",
+  "sales",
+
+  // Design
+  "designer",
+  "graphic design",
+  "UX",
+
+  // Finance
+  "accounting",
+  "finance",
+  "bookkeeper",
+
+  // Education
+  "teacher",
+  "tutor",
+  "education",
+
+  // Healthcare / medical
+  "healthcare",
+  "medical",
+  "clinical",
+
+  // Research
+  "research",
+
+  // HR / recruitment
+  "human resources",
+  "recruiter",
+
+  // E-commerce
+  "ecommerce",
+
+  // Project / business
+  "project manager",
+  "business",
+
+  // General remote work
+  "remote"
+
+];
+
+
+// ========================================
+// CLEAN HTML
+// ========================================
 
 function cleanHtml(html = "") {
 
   return String(html)
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#39;/gi, "'")
-    .replace(/&quot;/gi, '"')
-    .replace(/\s+/g, " ")
+
+    .replace(
+      /<script[^>]*>[\s\S]*?<\/script>/gi,
+      ""
+    )
+
+    .replace(
+      /<style[^>]*>[\s\S]*?<\/style>/gi,
+      ""
+    )
+
+    .replace(
+      /<[^>]+>/g,
+      " "
+    )
+
+    .replace(
+      /&nbsp;/gi,
+      " "
+    )
+
+    .replace(
+      /&amp;/gi,
+      "&"
+    )
+
+    .replace(
+      /&lt;/gi,
+      "<"
+    )
+
+    .replace(
+      /&gt;/gi,
+      ">"
+    )
+
+    .replace(
+      /&#39;/gi,
+      "'"
+    )
+
+    .replace(
+      /&quot;/gi,
+      '"'
+    )
+
+    .replace(
+      /\s+/g,
+      " "
+    )
+
     .trim();
 
 }
 
 
-/*
-========================================
-GET LOCATION RESTRICTIONS
-========================================
-*/
+// ========================================
+// GET LOCATION RESTRICTIONS
+// ========================================
 
 function getLocationRestrictions(job) {
 
@@ -84,29 +192,22 @@ function getLocationRestrictions(job) {
 }
 
 
-/*
-========================================
-CHECK NIGERIA ELIGIBILITY
-========================================
-
-Accepted:
-
-🇳🇬 Nigeria
-🌍 Worldwide
-🌍 Africa
-
-Empty locationRestrictions means
-worldwide on Himalayas.
-
-IMPORTANT:
-
-We do NOT accept a job just because
-the title says "remote".
-
-The location restriction must allow
-Nigeria or have no restriction.
-========================================
-*/
+// ========================================
+// CHECK NIGERIA ELIGIBILITY
+// ========================================
+//
+// Accepted:
+//
+// 1. Worldwide job
+// 2. Nigeria-specific job
+// 3. Africa-wide job
+//
+// Rejected:
+//
+// Jobs explicitly restricted to countries
+// that do not include Nigeria.
+//
+// ========================================
 
 function checkNigeriaFriendlyJob(job) {
 
@@ -114,36 +215,18 @@ function checkNigeriaFriendlyJob(job) {
     getLocationRestrictions(job);
 
 
-  /*
-  ========================================
-  WORLDWIDE
-  ========================================
-
-  Himalayas documents that an empty
-  locationRestrictions array means
-  worldwide.
-  */
-
+  // Empty restrictions means worldwide
   if (
     restrictions.length === 0
   ) {
 
     return {
-
       accepted: true,
-
       reason: "worldwide"
-
     };
 
   }
 
-
-  /*
-  ========================================
-  CHECK RESTRICTIONS
-  ========================================
-  */
 
   const countries =
     restrictions.map(country => {
@@ -170,84 +253,71 @@ function checkNigeriaFriendlyJob(job) {
     });
 
 
-  /*
-  ========================================
-  NIGERIA
-  ========================================
-  */
+  // ========================================
+  // NIGERIA
+  // ========================================
 
   const nigeria =
-    countries.some(country =>
+    countries.some(country => {
 
-      country.alpha2 === "ng" ||
+      return (
 
-      country.name === "nigeria" ||
+        country.alpha2 === "ng" ||
 
-      country.slug === "nigeria"
+        country.name === "nigeria" ||
 
-    );
+        country.slug === "nigeria"
+
+      );
+
+    });
 
 
   if (nigeria) {
 
     return {
-
       accepted: true,
-
       reason: "nigeria"
-
     };
 
   }
 
 
-  /*
-  ========================================
-  AFRICA
-  ========================================
-
-  Some listings may use a regional
-  restriction.
-  */
+  // ========================================
+  // AFRICA
+  // ========================================
 
   const africa =
-    countries.some(country =>
+    countries.some(country => {
 
-      country.name.includes("africa") ||
+      return (
 
-      country.slug.includes("africa")
+        country.name.includes(
+          "africa"
+        ) ||
 
-    );
+        country.slug.includes(
+          "africa"
+        )
+
+      );
+
+    });
 
 
   if (africa) {
 
     return {
-
       accepted: true,
-
       reason: "africa"
-
     };
 
   }
 
 
-  /*
-  ========================================
-  OTHER COUNTRY
-  ========================================
-
-  Example:
-
-  United States ❌
-  United Kingdom ❌
-  Canada ❌
-  India ❌
-  Australia ❌
-  Germany ❌
-  ========================================
-  */
+  // ========================================
+  // NOT AVAILABLE IN NIGERIA
+  // ========================================
 
   return {
 
@@ -261,11 +331,9 @@ function checkNigeriaFriendlyJob(job) {
 }
 
 
-/*
-========================================
-SEARCH HIMALAYAS
-========================================
-*/
+// ========================================
+// SEARCH HIMALAYAS
+// ========================================
 
 async function searchHimalayas(
   search = "",
@@ -275,34 +343,19 @@ async function searchHimalayas(
   try {
 
     const url =
-      new URL(HIMALAYAS_API);
+      new URL(
+        HIMALAYAS_API
+      );
 
 
-    /*
-    ========================================
-    COUNTRY = NIGERIA
-    ========================================
-
-    Himalayas supports country filtering.
-    ========================================
-    */
-
+    // Nigeria search returns jobs
+    // available to Nigeria, including
+    // worldwide jobs.
     url.searchParams.set(
       "country",
       "NG"
     );
 
-
-    /*
-    ========================================
-    WORLDWIDE TOO
-    ========================================
-
-    We make a separate worldwide request
-    so Nigerians also get jobs that have
-    no location restrictions.
-    ========================================
-    */
 
     if (
       search &&
@@ -330,8 +383,8 @@ async function searchHimalayas(
 
 
     console.log(
-      "Himalayas request:",
-      url.toString()
+      "Himalayas:",
+      search || "all"
     );
 
 
@@ -371,6 +424,7 @@ async function searchHimalayas(
 
     return data.jobs;
 
+
   } catch (error) {
 
     console.error(
@@ -378,6 +432,7 @@ async function searchHimalayas(
       error.message
     );
 
+
     return [];
 
   }
@@ -385,170 +440,66 @@ async function searchHimalayas(
 }
 
 
-/*
-========================================
-WORLDWIDE SEARCH
-========================================
-*/
+// ========================================
+// REMOVE DUPLICATES
+// ========================================
 
-async function searchWorldwide(
-  search = "",
-  page = 1
+function removeDuplicates(
+  jobs
 ) {
-
-  try {
-
-    const url =
-      new URL(HIMALAYAS_API);
-
-
-    /*
-    ========================================
-    SEARCH
-    ========================================
-    */
-
-    if (
-      search &&
-      search.trim()
-    ) {
-
-      url.searchParams.set(
-        "q",
-        search.trim()
-      );
-
-    }
-
-
-    /*
-    ========================================
-    WORLDWIDE ONLY
-    ========================================
-    */
-
-    url.searchParams.set(
-      "worldwide",
-      "true"
-    );
-
-
-    url.searchParams.set(
-      "sort",
-      "recent"
-    );
-
-
-    url.searchParams.set(
-      "page",
-      String(page)
-    );
-
-
-    console.log(
-      "Himalayas worldwide request:",
-      url.toString()
-    );
-
-
-    const response =
-      await fetch(
-        url.toString()
-      );
-
-
-    if (!response.ok) {
-
-      console.error(
-        "Himalayas worldwide error:",
-        response.status,
-        response.statusText
-      );
-
-      return [];
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    if (
-      !Array.isArray(
-        data.jobs
-      )
-    ) {
-
-      return [];
-
-    }
-
-
-    return data.jobs;
-
-  } catch (error) {
-
-    console.error(
-      "Himalayas worldwide request failed:",
-      error.message
-    );
-
-    return [];
-
-  }
-
-}
-
-
-/*
-========================================
-REMOVE DUPLICATES
-========================================
-*/
-
-function removeDuplicates(jobs) {
 
   const seen =
     new Set();
 
 
-  return jobs.filter(job => {
+  return jobs.filter(
+    job => {
 
-    const key =
-      job.guid ||
-      `${job.title}-${job.companySlug}`;
+      const key =
+
+        job.guid ||
+
+        job.applicationLink ||
+
+        `${job.title || ""}-${job.companyName || ""}`;
 
 
-    if (
-      seen.has(key)
-    ) {
+      if (
+        seen.has(key)
+      ) {
 
-      return false;
+        return false;
+
+      }
+
+
+      seen.add(key);
+
+      return true;
 
     }
-
-
-    seen.add(key);
-
-    return true;
-
-  });
+  );
 
 }
 
 
-/*
-========================================
-FORMAT JOB
-========================================
-*/
+// ========================================
+// FORMAT HIMALAYAS JOB
+// ========================================
 
-function formatHimalayasJob(job) {
+function formatHimalayasJob(
+  job
+) {
 
   const restrictions =
-    getLocationRestrictions(job);
+    getLocationRestrictions(
+      job
+    );
 
+
+  // ========================================
+  // LOCATION
+  // ========================================
 
   let location =
     "Worldwide";
@@ -560,129 +511,250 @@ function formatHimalayasJob(job) {
 
     location =
       restrictions
-        .map(country =>
 
-          country?.name ||
-          country?.alpha2 ||
-          country?.slug ||
-          ""
+        .map(country => {
 
-        )
+          return (
+
+            country?.name ||
+
+            country?.alpha2 ||
+
+            country?.slug ||
+
+            ""
+
+          );
+
+        })
+
         .filter(Boolean)
+
         .join(", ");
 
   }
 
 
+  // ========================================
+  // DESCRIPTION
+  // ========================================
+
+  const description =
+    cleanHtml(
+      job.description ||
+      job.excerpt ||
+      ""
+    );
+
+
+  // ========================================
+  // CATEGORY
+  // ========================================
+
+  const categories =
+
+    Array.isArray(
+      job.categories
+    )
+
+      ? job.categories.join(", ")
+
+      : "";
+
+
+  const parentCategories =
+
+    Array.isArray(
+      job.parentCategories
+    )
+
+      ? job.parentCategories.join(", ")
+
+      : "";
+
+
+  // ========================================
+  // SENIORITY
+  // ========================================
+
+  const seniority =
+
+    Array.isArray(
+      job.seniority
+    )
+
+      ? job.seniority.join(", ")
+
+      : "";
+
+
+  // ========================================
+  // RETURN JOB
+  // ========================================
+
   return {
 
     id:
+
       job.guid ||
-      `${job.companySlug || "company"}-${job.title}`,
+
+      `${job.companySlug || "company"}-${job.title || "job"}`,
+
 
     title:
-      job.title || "",
+
+      job.title ||
+      "Remote Job",
+
 
     company:
+
       job.companyName ||
       "Company not specified",
 
+
     companyLogo:
+
       job.companyLogo ||
       "",
 
+
     location,
 
+
     locationRestrictions:
+
       restrictions,
 
+
     timezoneRestrictions:
+
       Array.isArray(
         job.timezoneRestrictions
       )
+
         ? job.timezoneRestrictions
+
         : [],
 
-    description:
-      job.description ||
-      job.excerpt ||
-      "",
+
+    description,
+
 
     excerpt:
-      job.excerpt ||
-      "",
+
+      cleanHtml(
+        job.excerpt ||
+        ""
+      ),
+
 
     url:
+
       job.applicationLink ||
       "",
 
+
     created:
+
       job.pubDate
+
         ? new Date(
             job.pubDate
           ).toISOString()
+
         : "",
 
+
     expiryDate:
+
       job.expiryDate
+
         ? new Date(
             job.expiryDate
           ).toISOString()
+
         : "",
 
+
     salary_min:
+
       job.minSalary ??
       null,
 
+
     salary_max:
+
       job.maxSalary ??
       null,
 
+
     salary_period:
+
       job.salaryPeriod ||
-      "annual",
+      "",
+
 
     currency:
+
       job.currency ||
       "",
 
+
+    // Frontend compatibility
+    salary:
+
+      formatSalary(job),
+
+
     contract_type:
+
       job.employmentType ||
       "",
+
 
     contract_time:
+
       job.employmentType ||
       "",
 
+
+    type:
+
+      job.employmentType ||
+      "Full-time",
+
+
+    employmentType:
+
+      job.employmentType ||
+      "",
+
+
     category:
-      Array.isArray(
-        job.categories
-      )
-        ? job.categories.join(", ")
-        : "",
+
+      categories,
+
 
     parentCategory:
-      Array.isArray(
-        job.parentCategories
-      )
-        ? job.parentCategories.join(", ")
-        : "",
 
-    seniority:
-      Array.isArray(
-        job.seniority
-      )
-        ? job.seniority.join(", ")
-        : "",
+      parentCategories,
+
+
+    seniority,
+
 
     remote:
       true,
 
+
     nigeriaFriendly:
       true,
 
+
     source:
       "Himalayas",
+
 
     sourceUrl:
       "https://himalayas.app/"
@@ -692,11 +764,82 @@ function formatHimalayasJob(job) {
 }
 
 
-/*
-========================================
-GET REMOTE JOBS
-========================================
-*/
+// ========================================
+// FORMAT SALARY
+// ========================================
+
+function formatSalary(
+  job
+) {
+
+  const min =
+    job.minSalary;
+
+
+  const max =
+    job.maxSalary;
+
+
+  const currency =
+    job.currency ||
+    "";
+
+
+  const period =
+    job.salaryPeriod ||
+    "";
+
+
+  if (
+    min === null ||
+    min === undefined
+  ) {
+
+    return "Salary not specified";
+
+  }
+
+
+  const formattedMin =
+    Number(min).toLocaleString();
+
+
+  let result =
+    `${currency} ${formattedMin}`;
+
+
+  if (
+    max !== null &&
+    max !== undefined &&
+    max !== ""
+  ) {
+
+    const formattedMax =
+      Number(max).toLocaleString();
+
+
+    result +=
+      ` - ${formattedMax}`;
+
+  }
+
+
+  if (period) {
+
+    result +=
+      ` / ${period}`;
+
+  }
+
+
+  return result.trim();
+
+}
+
+
+// ========================================
+// GET DIVERSE REMOTE JOBS
+// ========================================
 
 async function getRemoteJobs(
   search = "",
@@ -704,17 +847,13 @@ async function getRemoteJobs(
 ) {
 
   const cacheKey =
-    `${search.toLowerCase()}-${page}`;
+    `diverse-${search.toLowerCase()}-${page}`;
 
-
-  /*
-  ========================================
-  CACHE CHECK
-  ========================================
-  */
 
   const cached =
-    cache.get(cacheKey);
+    cache.get(
+      cacheKey
+    );
 
 
   if (
@@ -732,116 +871,141 @@ async function getRemoteJobs(
   }
 
 
-  /*
-  ========================================
-  GET NIGERIA JOBS
-  ========================================
-  */
+  let rawJobs = [];
 
-  const nigeriaJobs =
-    await searchHimalayas(
-      search,
-      page
+
+  // ========================================
+  // USER SEARCH
+  // ========================================
+  //
+  // If user searches something specific,
+  // use that search directly.
+  //
+  // ========================================
+
+  if (
+    search &&
+    search.trim()
+  ) {
+
+    rawJobs =
+      await searchHimalayas(
+        search,
+        page
+      );
+
+  }
+
+
+  // ========================================
+  // NO SPECIFIC SEARCH
+  // ========================================
+  //
+  // Pull jobs from different categories.
+  //
+  // ========================================
+
+  else {
+
+    const results =
+      await Promise.all(
+
+        JOB_SEARCHES.map(
+          searchTerm =>
+            searchHimalayas(
+              searchTerm,
+              page
+            )
+        )
+
+      );
+
+
+    results.forEach(
+      jobs => {
+
+        if (
+          Array.isArray(jobs)
+        ) {
+
+          rawJobs.push(
+            ...jobs
+          );
+
+        }
+
+      }
     );
 
-
-  /*
-  ========================================
-  GET WORLDWIDE JOBS
-  ========================================
-  */
-
-  const worldwideJobs =
-    await searchWorldwide(
-      search,
-      page
-    );
-
-
-  /*
-  ========================================
-  COMBINE
-  ========================================
-  */
-
-  let allJobs = [
-
-    ...nigeriaJobs,
-
-    ...worldwideJobs
-
-  ];
+  }
 
 
   console.log(
-    `Raw Himalayas jobs: ${allJobs.length}`
+    `Raw jobs collected: ${rawJobs.length}`
   );
 
 
-  /*
-  ========================================
-  REMOVE DUPLICATES
-  ========================================
-  */
+  // ========================================
+  // REMOVE DUPLICATES
+  // ========================================
 
-  allJobs =
+  rawJobs =
     removeDuplicates(
-      allJobs
+      rawJobs
     );
 
 
-  /*
-  ========================================
-  FINAL ELIGIBILITY FILTER
-  ========================================
-  */
-
-  allJobs =
-    allJobs.filter(job => {
-
-      const check =
-        checkNigeriaFriendlyJob(
-          job
-        );
-
-
-      return check.accepted;
-
-    });
-
-
   console.log(
-    `Nigeria-friendly jobs: ${allJobs.length}`
+    `After duplicates removed: ${rawJobs.length}`
   );
 
 
-  /*
-  ========================================
-  FORMAT
-  ========================================
-  */
+  // ========================================
+  // NIGERIA-FRIENDLY FILTER
+  // ========================================
+
+  const nigeriaFriendlyJobs =
+    rawJobs.filter(
+      job => {
+
+        const result =
+          checkNigeriaFriendlyJob(
+            job
+          );
+
+
+        return result.accepted;
+
+      }
+    );
+
+
+  console.log(
+    `Nigeria-friendly jobs: ${nigeriaFriendlyJobs.length}`
+  );
+
+
+  // ========================================
+  // FORMAT JOBS
+  // ========================================
 
   const jobs =
-    allJobs.map(
+    nigeriaFriendlyJobs.map(
       formatHimalayasJob
     );
 
 
-  /*
-  ========================================
-  SAVE CACHE
-  ========================================
-  */
+  // ========================================
+  // CACHE
+  // ========================================
 
   cache.set(
     cacheKey,
     {
-
       time:
         Date.now(),
 
       jobs
-
     }
   );
 
@@ -851,11 +1015,9 @@ async function getRemoteJobs(
 }
 
 
-/*
-========================================
-ROOT
-========================================
-*/
+// ========================================
+// HOME
+// ========================================
 
 app.get(
   "/",
@@ -863,7 +1025,8 @@ app.get(
 
     res.json({
 
-      success: true,
+      success:
+        true,
 
       message:
         "Nigeria Remote Jobs API is running",
@@ -883,22 +1046,9 @@ app.get(
 );
 
 
-/*
-========================================
-REMOTE JOBS
-========================================
-
-/api/jobs/remote
-
-/api/jobs/remote?search=customer%20service
-
-/api/jobs/remote?search=virtual%20assistant
-
-/api/jobs/remote?search=data%20entry
-
-/api/jobs/remote?search=software%20developer
-========================================
-*/
+// ========================================
+// REMOTE JOBS
+// ========================================
 
 app.get(
   "/api/jobs/remote",
@@ -908,17 +1058,22 @@ app.get(
 
       const search =
         String(
-          req.query.search || ""
+          req.query.search ||
+          ""
         ).trim();
 
 
       const page =
         Math.max(
+
           1,
+
           parseInt(
-            req.query.page || "1",
+            req.query.page ||
+            "1",
             10
           )
+
         );
 
 
@@ -931,7 +1086,8 @@ app.get(
 
       res.json({
 
-        success: true,
+        success:
+          true,
 
         count:
           jobs.length,
@@ -941,6 +1097,7 @@ app.get(
         jobs
 
       });
+
 
     } catch (error) {
 
@@ -952,7 +1109,8 @@ app.get(
 
       res.status(500).json({
 
-        success: false,
+        success:
+          false,
 
         error:
           "Failed to fetch remote jobs",
@@ -968,11 +1126,9 @@ app.get(
 );
 
 
-/*
-========================================
-REMOTE DEBUG
-========================================
-*/
+// ========================================
+// DEBUG
+// ========================================
 
 app.get(
   "/api/jobs/remote/debug",
@@ -982,74 +1138,67 @@ app.get(
 
       const search =
         String(
-          req.query.search || ""
+          req.query.search ||
+          ""
         ).trim();
 
 
-      const nigeriaJobs =
-        await searchHimalayas(
+      const jobs =
+        await getRemoteJobs(
           search,
           1
         );
-
-
-      const worldwideJobs =
-        await searchWorldwide(
-          search,
-          1
-        );
-
-
-      const allJobs =
-        removeDuplicates([
-
-          ...nigeriaJobs,
-
-          ...worldwideJobs
-
-        ]);
 
 
       const results =
-        allJobs.map(job => {
+        jobs.map(
+          job => {
 
-          const check =
-            checkNigeriaFriendlyJob(
-              job
-            );
+            const check =
+              checkNigeriaFriendlyJob(
+                job
+              );
 
 
-          return {
+            return {
 
-            id:
-              job.guid || "",
+              id:
+                job.id,
 
-            title:
-              job.title || "",
+              title:
+                job.title,
 
-            company:
-              job.companyName || "",
+              company:
+                job.company,
 
-            locationRestrictions:
-              job.locationRestrictions || [],
+              location:
+                job.location,
 
-            accepted:
-              check.accepted,
+              locationRestrictions:
+                job.locationRestrictions,
 
-            reason:
-              check.reason,
+              accepted:
+                check.accepted,
 
-            url:
-              job.applicationLink || ""
+              reason:
+                check.reason,
 
-          };
+              category:
+                job.category,
 
-        });
+              url:
+                job.url
+
+            };
+
+          }
+        );
 
 
       res.json({
 
-        success: true,
+        success:
+          true,
 
         search,
 
@@ -1061,17 +1210,19 @@ app.get(
 
       });
 
+
     } catch (error) {
 
       console.error(
-        "Remote debug error:",
+        "Debug error:",
         error
       );
 
 
       res.status(500).json({
 
-        success: false,
+        success:
+          false,
 
         error:
           "Debug search failed",
@@ -1087,18 +1238,9 @@ app.get(
 );
 
 
-/*
-========================================
-GENERAL JOBS
-========================================
-
-/api/jobs
-
-/api/jobs?type=remote
-
-/api/jobs?search=customer service
-========================================
-*/
+// ========================================
+// GENERAL JOBS ENDPOINT
+// ========================================
 
 app.get(
   "/api/jobs",
@@ -1106,33 +1248,26 @@ app.get(
 
     try {
 
-      const type =
-        String(
-          req.query.type || ""
-        ).toLowerCase();
-
-
       const search =
         String(
-          req.query.search || ""
+          req.query.search ||
+          ""
         ).trim();
 
 
       const page =
         Math.max(
+
           1,
+
           parseInt(
-            req.query.page || "1",
+            req.query.page ||
+            "1",
             10
           )
+
         );
 
-
-      /*
-      ====================================
-      REMOTE
-      ====================================
-      */
 
       const jobs =
         await getRemoteJobs(
@@ -1143,7 +1278,8 @@ app.get(
 
       res.json({
 
-        success: true,
+        success:
+          true,
 
         count:
           jobs.length,
@@ -1153,6 +1289,7 @@ app.get(
         jobs
 
       });
+
 
     } catch (error) {
 
@@ -1164,7 +1301,8 @@ app.get(
 
       res.status(500).json({
 
-        success: false,
+        success:
+          false,
 
         error:
           "Failed to fetch jobs",
@@ -1180,11 +1318,9 @@ app.get(
 );
 
 
-/*
-========================================
-START SERVER
-========================================
-*/
+// ========================================
+// START SERVER
+// ========================================
 
 app.listen(
   PORT,

@@ -16,25 +16,41 @@ app.use(express.static(path.join(__dirname, "public")));
 
 /*
 ========================================
-ADZUNA SETTINGS
+ENVIRONMENT VARIABLES
 ========================================
 */
 
 const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 
-
-/*
-========================================
-TELEGRAM SETTINGS
-========================================
-*/
-
 const TELEGRAM_BOT_TOKEN =
   process.env.TELEGRAM_BOT_TOKEN;
 
 const TELEGRAM_CHANNEL_ID =
   process.env.TELEGRAM_CHANNEL_ID;
+
+
+/*
+========================================
+HEALTH CHECK
+========================================
+*/
+
+app.get("/health", (req, res) => {
+
+  res.json({
+    success: true,
+    message: "JobFinder backend is running",
+    adzunaConfigured:
+      Boolean(ADZUNA_APP_ID && ADZUNA_APP_KEY),
+    telegramConfigured:
+      Boolean(
+        TELEGRAM_BOT_TOKEN &&
+        TELEGRAM_CHANNEL_ID
+      )
+  });
+
+});
 
 
 /*
@@ -49,10 +65,22 @@ async function getJobs(
   location = ""
 ) {
 
+  if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) {
+
+    console.error(
+      "Adzuna API credentials are missing."
+    );
+
+    return [];
+
+  }
+
+
   try {
 
     const url =
       `https://api.adzuna.com/v1/api/jobs/${country}/search/1`;
+
 
     const response = await axios.get(url, {
 
@@ -66,22 +94,24 @@ async function getJobs(
 
         what: keyword,
 
-        where: location,
+        where: location
 
-        content-type: "application/json"
+      },
 
-      }
+      timeout: 15000
 
     });
 
 
-    return response.data.results || [];
+    return response.data?.results || [];
+
 
   } catch (error) {
 
     console.error(
       "Adzuna error:",
-      error.response?.data || error.message
+      error.response?.data ||
+      error.message
     );
 
     return [];
@@ -101,9 +131,13 @@ function formatJob(job) {
 
   return {
 
-    id: job.id,
+    id:
+      job.id ||
+      `${job.title}-${job.company?.display_name}-${job.created}`,
 
-    title: job.title || "Job Opportunity",
+    title:
+      job.title ||
+      "Job Opportunity",
 
     company:
       job.company?.display_name ||
@@ -118,14 +152,17 @@ function formatJob(job) {
       "No description available.",
 
     salary:
-
       job.salary_min
         ? `${job.salary_min} - ${job.salary_max || ""}`
         : "Salary not specified",
 
-    url: job.redirect_url,
+    url:
+      job.redirect_url ||
+      "",
 
-    created: job.created
+    created:
+      job.created ||
+      null
 
   };
 
@@ -134,7 +171,7 @@ function formatJob(job) {
 
 /*
 ========================================
-GET JOBS API FOR WEBSITE
+GET JOBS FOR WEBSITE
 ========================================
 */
 
@@ -143,21 +180,31 @@ app.get("/api/jobs", async (req, res) => {
   try {
 
     const search =
-      req.query.search || "jobs";
+      String(
+        req.query.search || "jobs"
+      ).trim();
+
 
     const location =
-      req.query.location || "";
+      String(
+        req.query.location || ""
+      ).trim();
+
 
     const type =
-      req.query.type || "international";
-
-
-    let country = "gb";
+      String(
+        req.query.type || "all"
+      ).toLowerCase();
 
 
     /*
-    Nigeria
+    ====================================
+    DETERMINE COUNTRY
+    ====================================
     */
+
+    let country = "gb";
+
 
     if (type === "nigeria") {
 
@@ -166,9 +213,12 @@ app.get("/api/jobs", async (req, res) => {
     }
 
 
-    /*
-    Remote
-    */
+    if (type === "international") {
+
+      country = "gb";
+
+    }
+
 
     if (type === "remote") {
 
@@ -177,6 +227,12 @@ app.get("/api/jobs", async (req, res) => {
     }
 
 
+    /*
+    ====================================
+    FETCH JOBS
+    ====================================
+    */
+
     const jobs = await getJobs(
       country,
       search,
@@ -184,29 +240,73 @@ app.get("/api/jobs", async (req, res) => {
     );
 
 
+    /*
+    ====================================
+    FORMAT JOBS
+    ====================================
+    */
+
     const formattedJobs =
       jobs.map(formatJob);
+
+
+    /*
+    ====================================
+    REMOTE FILTER
+    ====================================
+    */
+
+    let finalJobs =
+      formattedJobs;
+
+
+    if (type === "remote") {
+
+      finalJobs =
+        formattedJobs.filter(job => {
+
+          const text =
+            `${job.title} ${job.location} ${job.description}`
+              .toLowerCase();
+
+          return (
+            text.includes("remote") ||
+            text.includes("work from home") ||
+            text.includes("work-from-home")
+          );
+
+        });
+
+    }
 
 
     res.json({
 
       success: true,
 
-      count: formattedJobs.length,
+      count: finalJobs.length,
 
-      jobs: formattedJobs
+      jobs: finalJobs
 
     });
 
+
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Jobs API error:",
+      error
+    );
+
 
     res.status(500).json({
 
       success: false,
 
-      message: "Unable to fetch jobs"
+      message:
+        "Unable to fetch jobs",
+
+      jobs: []
 
     });
 
@@ -217,17 +317,74 @@ app.get("/api/jobs", async (req, res) => {
 
 /*
 ========================================
+CLEAN DESCRIPTION
+========================================
+*/
+
+function cleanDescription(
+  description
+) {
+
+  if (!description) {
+
+    return "No description available.";
+
+  }
+
+
+  return String(description)
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+}
+
+
+/*
+========================================
 TELEGRAM POST FUNCTION
 ========================================
 */
 
 async function postToTelegram(job) {
 
+  if (
+    !TELEGRAM_BOT_TOKEN ||
+    !TELEGRAM_CHANNEL_ID
+  ) {
+
+    console.log(
+      "Telegram is not configured."
+    );
+
+    return false;
+
+  }
+
+
+  if (!job.url) {
+
+    console.log(
+      "Skipping job without application URL:",
+      job.title
+    );
+
+    return false;
+
+  }
+
+
   try {
 
-    const message = `
+    const description =
+      cleanDescription(
+        job.description
+      );
 
-🚨 NEW JOB OPPORTUNITY
+
+    const message =
+
+`🚨 NEW JOB OPPORTUNITY
 
 💼 ${job.title}
 
@@ -237,16 +394,12 @@ async function postToTelegram(job) {
 
 💰 ${job.salary}
 
-📝 ${job.description
-      .replace(/<[^>]*>/g, "")
-      .substring(0, 500)}
+📝 ${description.substring(0, 500)}
 
 🔗 APPLY HERE:
 ${job.url}
 
-#Jobs #JobOpportunity #NigeriaJobs #RemoteJobs
-
-`;
+#Jobs #JobOpportunity #NigeriaJobs #RemoteJobs`;
 
 
     const telegramURL =
@@ -266,6 +419,12 @@ ${job.url}
 
         disable_web_page_preview: false
 
+      },
+
+      {
+
+        timeout: 15000
+
       }
 
     );
@@ -275,6 +434,9 @@ ${job.url}
       "Posted to Telegram:",
       job.title
     );
+
+
+    return true;
 
 
   } catch (error) {
@@ -288,6 +450,9 @@ ${job.url}
 
     );
 
+
+    return false;
+
   }
 
 }
@@ -295,7 +460,7 @@ ${job.url}
 
 /*
 ========================================
-AUTOMATIC TELEGRAM JOB FETCHER
+AUTOMATIC JOB FETCHER
 ========================================
 */
 
@@ -306,25 +471,68 @@ async function fetchAndPostJobs() {
   );
 
 
-  const jobs =
-    await getJobs(
-      "gb",
-      "remote jobs",
-      ""
+  try {
+
+    const jobs =
+      await getJobs(
+        "gb",
+        "remote jobs",
+        ""
+      );
+
+
+    const formattedJobs =
+      jobs.map(formatJob);
+
+
+    console.log(
+      `Found ${formattedJobs.length} jobs.`
     );
 
 
-  const formattedJobs =
-    jobs.map(formatJob);
+    /*
+    ==================================
+    TEMPORARY PROTECTION
+    ==================================
+
+    This prevents the same job from being
+    posted multiple times while the server
+    remains running.
+
+    MongoDB will be added later for
+    permanent duplicate protection.
+    */
+
+    for (const job of formattedJobs) {
+
+      if (
+        postedJobs.has(job.id)
+      ) {
+
+        continue;
+
+      }
 
 
-  /*
-  Temporary duplicate protection
-  */
+      const posted =
+        await postToTelegram(job);
 
-  for (const job of formattedJobs) {
 
-    await postToTelegram(job);
+      if (posted) {
+
+        postedJobs.add(job.id);
+
+      }
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Automatic job fetch error:",
+      error.message
+    );
 
   }
 
@@ -333,15 +541,17 @@ async function fetchAndPostJobs() {
 
 /*
 ========================================
-RUN AUTOMATICALLY
+TEMPORARY DUPLICATE PROTECTION
 ========================================
 */
 
-/*
-For testing:
+const postedJobs = new Set();
 
-Runs 30 seconds after
-server starts.
+
+/*
+========================================
+START AUTOMATIC FETCH
+========================================
 */
 
 setTimeout(() => {
@@ -352,7 +562,9 @@ setTimeout(() => {
 
 
 /*
-Then every 30 minutes.
+========================================
+RUN EVERY 30 MINUTES
+========================================
 */
 
 setInterval(() => {
@@ -371,7 +583,7 @@ START SERVER
 app.listen(PORT, () => {
 
   console.log(
-    `Job Finder running on port ${PORT}`
+    `JobFinder running on port ${PORT}`
   );
 
 });

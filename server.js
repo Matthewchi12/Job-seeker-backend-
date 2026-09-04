@@ -14,16 +14,17 @@ REMOTE JOB ELIGIBILITY
 function isNigeriaFriendlyRemoteJob(job) {
 
   const title =
-    String(job.title || "").toLowerCase();
+    String(job?.title || "").toLowerCase();
 
   const location =
-    String(job.location || "").toLowerCase();
+    String(job?.location || "").toLowerCase();
 
   const description =
-    String(job.description || "").toLowerCase();
+    String(job?.description || "").toLowerCase();
 
   const text =
     `${title} ${location} ${description}`;
+
 
   /*
   ========================================
@@ -59,6 +60,9 @@ function isNigeriaFriendlyRemoteJob(job) {
     "us-based applicants only",
     "usa-based applicants only",
 
+    "us based applicants only",
+    "usa based applicants only",
+
     "must be located in the us",
     "must be located in usa",
     "must be located in the usa",
@@ -69,6 +73,7 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "only applicants located in the us",
     "only applicants located in usa",
+    "only applicants located in the usa",
 
     "only available to us residents",
     "only available to usa residents",
@@ -91,22 +96,29 @@ function isNigeriaFriendlyRemoteJob(job) {
     "u.k. only",
 
     "uk residents only",
+    "u.k. residents only",
 
     "uk-based applicants only",
+    "uk based applicants only",
 
     "must be located in the uk",
+    "must be located in uk",
 
     "must reside in the uk",
+    "must reside in uk",
 
     "only applicants located in the uk",
+    "only applicants located in uk",
 
     "only available to uk residents",
 
     "uk work authorization required",
+    "u.k. work authorization required",
 
     "must have uk work authorization",
 
     "right to work in the uk",
+    "right to work in uk",
 
     /*
     Canada
@@ -115,10 +127,10 @@ function isNigeriaFriendlyRemoteJob(job) {
     "canada only",
 
     "canadian residents only",
-
     "canada residents only",
 
     "canada-based applicants only",
+    "canada based applicants only",
 
     "must be located in canada",
 
@@ -127,6 +139,7 @@ function isNigeriaFriendlyRemoteJob(job) {
     "only applicants located in canada",
 
     "only available to canadian residents",
+    "only available to canada residents",
 
     "canadian work authorization required",
 
@@ -141,10 +154,10 @@ function isNigeriaFriendlyRemoteJob(job) {
     "australia only",
 
     "australian residents only",
-
     "australia residents only",
 
     "australia-based applicants only",
+    "australia based applicants only",
 
     "must be located in australia",
 
@@ -153,6 +166,7 @@ function isNigeriaFriendlyRemoteJob(job) {
     "only applicants located in australia",
 
     "only available to australian residents",
+    "only available to australia residents",
 
     "australian work authorization required",
 
@@ -168,36 +182,117 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "new zealand residents only",
 
+    "new zealand-based applicants only",
+    "new zealand based applicants only",
+
     "must be located in new zealand",
 
     "must reside in new zealand",
 
+    "only applicants located in new zealand",
+
+    "only available to new zealand residents",
+
+    "new zealand work authorization required",
+
     "right to work in new zealand",
 
     /*
-    Europe-specific restrictions
+    Europe
     */
 
     "eu residents only",
-
     "european residents only",
 
     "eu-based applicants only",
+    "eu based applicants only",
 
     "must be located in the eu",
+    "must be located in eu",
 
     "must reside in the eu",
+    "must reside in eu",
 
     "right to work in the eu",
 
-    "europe work authorization required"
+    "europe work authorization required",
+
+    /*
+    Other countries
+    */
+
+    "germany only",
+    "german residents only",
+    "must be located in germany",
+    "must reside in germany",
+    "right to work in germany",
+
+    "france only",
+    "french residents only",
+    "must be located in france",
+    "must reside in france",
+    "right to work in france",
+
+    "netherlands only",
+    "dutch residents only",
+    "must be located in the netherlands",
+    "must reside in the netherlands",
+    "right to work in the netherlands",
+
+    "ireland only",
+    "irish residents only",
+    "must be located in ireland",
+    "must reside in ireland",
+    "right to work in ireland",
+
+    "switzerland only",
+    "swiss residents only",
+    "must be located in switzerland",
+    "must reside in switzerland",
+    "right to work in switzerland",
+
+    "spain only",
+    "spanish residents only",
+    "must be located in spain",
+    "must reside in spain",
+    "right to work in spain",
+
+    "italy only",
+    "italian residents only",
+    "must be located in italy",
+    "must reside in italy",
+    "right to work in italy",
+
+    "sweden only",
+    "swedish residents only",
+    "must be located in sweden",
+    "must reside in sweden",
+    "right to work in sweden",
+
+    "norway only",
+    "norwegian residents only",
+    "must be located in norway",
+    "must reside in norway",
+    "right to work in norway",
+
+    "denmark only",
+    "danish residents only",
+    "must be located in denmark",
+    "must reside in denmark",
+    "right to work in denmark",
+
+    "finland only",
+    "finnish residents only",
+    "must be located in finland",
+    "must reside in finland",
+    "right to work in finland"
 
   ];
 
 
   const restricted =
     countryRestrictions.some(
-      word => text.includes(word)
+      phrase => text.includes(phrase)
     );
 
 
@@ -226,64 +321,42 @@ function isNigeriaFriendlyRemoteJob(job) {
     "candidates must be based in",
 
     "only hiring in",
-
     "only hiring from",
 
     "hiring only in",
-
     "available only in"
 
   ];
 
-
-  /*
-  Only reject these when followed by
-  a known foreign country/region.
-  */
 
   const restrictedLocations = [
 
     "united states",
     "usa",
     "u.s.",
-    "us",
 
     "united kingdom",
     "uk",
     "u.k.",
 
     "canada",
-
     "australia",
-
     "new zealand",
 
     "germany",
-
     "france",
-
     "netherlands",
-
     "ireland",
-
     "switzerland",
-
     "spain",
-
     "italy",
-
     "sweden",
-
     "norway",
-
     "denmark",
-
     "finland",
 
     "europe",
-
     "european union",
-
     "eu"
 
   ];
@@ -319,11 +392,9 @@ function isNigeriaFriendlyRemoteJob(job) {
   const worldwideWords = [
 
     "worldwide",
-
     "remote worldwide",
 
     "work from anywhere",
-
     "work-from-anywhere",
 
     "anywhere in the world",
@@ -335,41 +406,31 @@ function isNigeriaFriendlyRemoteJob(job) {
     "any country",
 
     "global remote",
-
     "globally remote",
-
     "remote global",
 
     "global team",
-
     "global workforce",
-
     "global position",
 
     "international applicants",
-
     "international candidates",
 
     "international applicants welcome",
-
     "international candidates welcome",
 
     "open to international candidates",
-
     "open to international applicants",
 
     "open to applicants worldwide",
-
     "open to candidates worldwide",
 
     "open worldwide",
 
     "remote - worldwide",
-
-    "remote worldwide",
+    "remote — worldwide",
 
     "distributed team",
-
     "distributed workforce",
 
     "fully distributed",
@@ -381,7 +442,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "remote from anywhere",
 
     "location independent",
-
     "location-independent"
 
   ];
@@ -396,37 +456,26 @@ function isNigeriaFriendlyRemoteJob(job) {
   const africaWords = [
 
     "africa",
-
     "african",
 
     "africa-based",
-
     "africa based",
 
     "sub-saharan africa",
 
     "west africa",
-
     "east africa",
-
     "south africa",
 
     "nigeria",
-
     "nigerian",
 
     "nigeria-based",
-
     "nigeria based",
 
     "ghana",
-
     "kenya",
-
     "egypt",
-
-    "south africa",
-
     "morocco"
 
   ];
@@ -438,15 +487,6 @@ function isNigeriaFriendlyRemoteJob(job) {
   ========================================
   */
 
-  /*
-  We don't restrict remote jobs
-  to technology.
-
-  These keywords help identify the
-  broad range of work Nigerians can
-  perform remotely.
-  */
-
   const remoteJobCategories = [
 
     /*
@@ -455,20 +495,28 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "software developer",
     "software engineer",
+
     "web developer",
+
     "frontend developer",
     "front-end developer",
+
     "backend developer",
     "back-end developer",
+
     "full stack developer",
     "full-stack developer",
 
     "mobile developer",
+
     "react developer",
+
     "javascript developer",
+
     "python developer",
 
     "devops",
+
     "cloud engineer",
     "cloud developer",
 
@@ -485,6 +533,7 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "data analyst",
     "data analysis",
+
     "data scientist",
     "data engineer",
 
@@ -506,6 +555,7 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "ai trainer",
     "ai training",
+
     "ai annotator",
     "ai annotation",
 
@@ -524,10 +574,7 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "customer support",
     "customer service",
-
     "customer success",
-
-    "technical support",
 
     "call center",
     "call centre",
@@ -641,7 +688,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     */
 
     "operations",
-
     "operations specialist",
     "operations manager",
 
@@ -670,7 +716,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "consulting",
 
     "legal assistant",
-
     "paralegal",
 
     "translator",
@@ -679,7 +724,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "transcription",
 
     "community manager",
-
     "community specialist"
 
   ];
@@ -713,8 +757,13 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "remote in the us",
     "remote in usa",
+    "remote in the usa",
+
     "remote in the uk",
+    "remote in uk",
+
     "remote in canada",
+
     "remote in australia",
 
     "remote - us",
@@ -727,7 +776,13 @@ function isNigeriaFriendlyRemoteJob(job) {
     "remote, usa",
     "remote, uk",
     "remote, canada",
-    "remote, australia"
+    "remote, australia",
+
+    "remote: us",
+    "remote: usa",
+    "remote: uk",
+    "remote: canada",
+    "remote: australia"
 
   ];
 
@@ -770,13 +825,9 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
-  Genuine remote professional jobs with
-  no obvious country restriction:
-  include.
-
-  This is important because many companies
-  simply say "Remote" without saying
-  "Worldwide".
+  Genuine remote professional jobs:
+  include when there is no obvious
+  country restriction.
   */
 
   if (hasRemoteCategory) {
@@ -788,9 +839,8 @@ function isNigeriaFriendlyRemoteJob(job) {
   Generic remote job with no obvious
   restriction.
 
-  Keep it because we don't want to
-  unnecessarily remove legitimate
-  opportunities.
+  Keep it because legitimate remote jobs
+  may not specify their location.
   */
 
   return true;
@@ -812,9 +862,6 @@ async function getRemoteJobs(search) {
   ========================================
   REMOTE JOB SEARCH
   ========================================
-
-  Search multiple broad remote terms
-  while keeping API usage controlled.
   */
 
   const searchTerms = [
@@ -828,14 +875,31 @@ async function getRemoteJobs(search) {
   ];
 
 
+  /*
+  Make sure the search value is valid.
+  */
+
+  const safeSearch =
+    String(search || "").trim();
+
+
+  if (!safeSearch) {
+    return [];
+  }
+
+
+  /*
+  ========================================
+  SEARCH INTERNATIONAL COUNTRIES
+  ========================================
+  */
+
   for (
-    const country
-    of INTERNATIONAL_COUNTRIES
+    const country of INTERNATIONAL_COUNTRIES
   ) {
 
     for (
-      const keyword
-      of searchTerms
+      const keyword of searchTerms
     ) {
 
       try {
@@ -849,8 +913,15 @@ async function getRemoteJobs(search) {
           );
 
 
+        if (!Array.isArray(jobs)) {
+          continue;
+        }
+
+
         const formatted =
-          jobs.map(formatJob);
+          jobs
+            .map(formatJob)
+            .filter(Boolean);
 
 
         const nigeriaFriendly =
@@ -868,7 +939,7 @@ async function getRemoteJobs(search) {
 
         console.error(
           `Remote ${country} failed:`,
-          error.message
+          error?.message || error
         );
 
       }
@@ -884,7 +955,5 @@ async function getRemoteJobs(search) {
   ========================================
   */
 
-  return removeDuplicates(
-    results
-  );
+  return removeDuplicates(results);
 }

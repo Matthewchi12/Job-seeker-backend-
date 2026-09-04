@@ -1,5 +1,6 @@
 // ========================================
 // NIGERIA-FRIENDLY REMOTE JOBS BACKEND
+// + VISA SPONSORSHIP JOBS
 // HIMALAYAS API
 // ========================================
 
@@ -36,81 +37,261 @@ const CACHE_TIME =
 // REMOTE JOB CATEGORIES
 // ========================================
 //
-// Broad categories.
-// These are rotated to avoid sending
-// too many API requests at once.
+// Broad non-tech remote jobs.
 //
+// Technology is intentionally limited.
 // ========================================
 
 const JOB_SEARCHES = [
 
-  // Technology
-  "software",
-  "IT",
-  "developer",
+  // ========================================
+  // CUSTOMER SERVICE
+  // ========================================
 
-  // Customer service
   "customer service",
+  "customer service representative",
   "customer support",
-  "technical support",
+  "customer support specialist",
+  "customer care",
+  "customer care representative",
+  "client support",
+  "client services",
+  "support specialist",
+  "support representative",
+  "chat support",
+  "live chat support",
+  "email support",
+  "call center",
+  "call centre",
+  "help desk",
+  "customer success",
+  "customer success specialist",
 
-  // Virtual assistance
+  // ========================================
+  // SALES
+  // ========================================
+
+  "sales specialist",
+  "sales representative",
+  "sales associate",
+  "sales executive",
+  "inside sales",
+  "remote sales",
+  "sales support",
+  "business development",
+  "business development representative",
+  "account manager",
+  "account executive",
+  "appointment setter",
+  "lead generation",
+
+  // ========================================
+  // VIRTUAL ASSISTANT
+  // ========================================
+
   "virtual assistant",
-  "administrative",
-  "operations",
+  "virtual administrative assistant",
+  "administrative assistant",
+  "administrative support",
+  "executive assistant",
+  "personal assistant",
+  "remote assistant",
+  "office assistant",
   "data entry",
+  "data entry specialist",
 
-  // Data / AI
-  "data",
-  "data annotation",
-  "AI",
+  // ========================================
+  // OPERATIONS
+  // ========================================
 
-  // Writing
-  "writer",
-  "content",
-  "copywriter",
+  "operations assistant",
+  "operations specialist",
+  "operations coordinator",
+  "operations",
+  "order processing",
+  "order management",
 
-  // Marketing / Sales
-  "marketing",
+  // ========================================
+  // SOCIAL MEDIA / MARKETING
+  // ========================================
+
   "social media",
-  "sales",
+  "social media assistant",
+  "social media specialist",
+  "social media manager",
+  "marketing",
+  "marketing assistant",
+  "marketing specialist",
+  "digital marketing",
+  "marketing coordinator",
 
-  // Design
-  "designer",
+  // ========================================
+  // WRITING
+  // ========================================
+
+  "content writer",
+  "content writing",
+  "content creator",
+  "copywriter",
+  "copywriting",
+  "blog writer",
+  "technical writer",
+  "writer",
+
+  // ========================================
+  // GRAPHIC DESIGN
+  // ========================================
+
+  "graphic designer",
   "graphic design",
-  "UX",
+  "Canva designer",
+  "Canva",
+  "visual designer",
+  "creative designer",
+  "social media designer",
 
-  // Finance
-  "accounting",
-  "finance",
+  // ========================================
+  // CUSTOMER SUCCESS / ACCOUNT MANAGEMENT
+  // ========================================
+
+  "customer success",
+  "customer success specialist",
+  "client success",
+  "account manager",
+  "account management",
+  "client manager",
+
+  // ========================================
+  // RECRUITMENT / HR
+  // ========================================
+
+  "recruiter",
+  "recruitment specialist",
+  "talent acquisition",
+  "HR assistant",
+  "human resources",
+  "HR coordinator",
+
+  // ========================================
+  // FINANCE / BOOKKEEPING
+  // ========================================
+
   "bookkeeper",
+  "bookkeeping",
+  "accounting assistant",
+  "accounts assistant",
+  "finance assistant",
+  "finance",
+  "accounting",
 
-  // Education
-  "teacher",
-  "tutor",
-  "education",
+  // ========================================
+  // E-COMMERCE
+  // ========================================
 
-  // Healthcare
-  "healthcare",
-  "medical",
-  "clinical",
+  "ecommerce",
+  "ecommerce assistant",
+  "ecommerce specialist",
+  "ecommerce manager",
+  "shopify assistant",
+  "online store assistant",
 
-  // Research
+  // ========================================
+  // RESEARCH
+  // ========================================
+
+  "research assistant",
+  "research specialist",
   "research",
 
-  // HR
-  "human resources",
-  "recruiter",
+  // ========================================
+  // AI / DATA ANNOTATION
+  // ========================================
 
-  // E-commerce
-  "ecommerce",
+  "AI data annotation",
+  "data annotation",
+  "AI trainer",
+  "AI evaluator",
+  "AI rater",
+  "data labeling",
 
-  // Business
+  // ========================================
+  // EDUCATION
+  // ========================================
+
+  "online tutor",
+  "online teacher",
+  "tutor",
+  "teacher",
+  "education assistant",
+
+  // ========================================
+  // HEALTHCARE / MEDICAL
+  // ========================================
+
+  "healthcare",
+  "medical assistant",
+  "medical writer",
+  "clinical research",
+  "healthcare assistant",
+
+  // ========================================
+  // PROJECT / BUSINESS
+  // ========================================
+
+  "project coordinator",
+  "project assistant",
   "project manager",
-  "business",
+  "business operations",
+  "business assistant",
 
-  // General remote
-  "remote"
+  // ========================================
+  // TECHNOLOGY
+  // LOW AMOUNT ONLY
+  // ========================================
+
+  "web developer",
+  "frontend developer",
+  "software developer"
+
+];
+
+
+// ========================================
+// VISA SPONSORSHIP SEARCHES
+// ========================================
+//
+// These are separate from remote jobs.
+//
+// These searches look for jobs mentioning:
+//
+// - Visa sponsorship
+// - Work visa
+// - Visa sponsored
+// - Skilled worker sponsorship
+// - Relocation
+// - Employer sponsorship
+//
+// ========================================
+
+const VISA_SEARCHES = [
+
+  "visa sponsorship",
+  "visa sponsored",
+  "visa sponsorship available",
+  "work visa sponsorship",
+  "work visa",
+  "visa support",
+  "employer sponsorship",
+  "employer sponsored",
+  "sponsorship available",
+  "skilled worker sponsorship",
+  "skilled worker visa",
+  "relocation assistance",
+  "relocation support",
+  "relocation package",
+  "international applicants",
+  "sponsor visa",
+  "visa sponsorship jobs"
 
 ];
 
@@ -195,19 +376,6 @@ function getLocationRestrictions(job) {
 
 // ========================================
 // CHECK NIGERIA ELIGIBILITY
-// ========================================
-//
-// ACCEPT:
-//
-// 1. Worldwide
-// 2. Nigeria
-// 3. Africa
-//
-// REJECT:
-//
-// Explicit countries that do not
-// include Nigeria.
-//
 // ========================================
 
 function checkNigeriaFriendlyJob(job) {
@@ -347,10 +515,19 @@ function checkNigeriaFriendlyJob(job) {
 // ========================================
 // SEARCH HIMALAYAS
 // ========================================
+//
+// For remote jobs:
+// country=NG
+//
+// For visa jobs:
+// no country restriction
+//
+// ========================================
 
 async function searchHimalayas(
   search = "",
-  page = 1
+  page = 1,
+  nigeriaOnly = true
 ) {
 
   try {
@@ -362,20 +539,22 @@ async function searchHimalayas(
 
 
     // ========================================
-    // IMPORTANT
-    // ========================================
-    //
-    // country=NG asks Himalayas for jobs
-    // available in Nigeria, including
-    // worldwide jobs.
-    //
+    // NIGERIA FILTER
     // ========================================
 
-    url.searchParams.set(
-      "country",
-      "NG"
-    );
+    if (nigeriaOnly) {
 
+      url.searchParams.set(
+        "country",
+        "NG"
+      );
+
+    }
+
+
+    // ========================================
+    // SEARCH TERM
+    // ========================================
 
     if (
       search &&
@@ -390,11 +569,19 @@ async function searchHimalayas(
     }
 
 
+    // ========================================
+    // SORT BY RECENT
+    // ========================================
+
     url.searchParams.set(
       "sort",
       "recent"
     );
 
+
+    // ========================================
+    // PAGE
+    // ========================================
 
     url.searchParams.set(
       "page",
@@ -404,7 +591,10 @@ async function searchHimalayas(
 
     console.log(
       "Himalayas search:",
-      search || "all"
+      search || "all",
+      nigeriaOnly
+        ? "(Nigeria)"
+        : "(Visa)"
     );
 
 
@@ -517,10 +707,12 @@ function formatSalary(
     job.maxSalary;
 
   const currency =
-    job.currency || "";
+    job.currency ||
+    "";
 
   const period =
-    job.salaryPeriod || "";
+    job.salaryPeriod ||
+    "";
 
 
   if (
@@ -534,7 +726,9 @@ function formatSalary(
 
 
   const formattedMin =
-    Number(min).toLocaleString();
+    Number(
+      min
+    ).toLocaleString();
 
 
   let result =
@@ -548,7 +742,9 @@ function formatSalary(
   ) {
 
     const formattedMax =
-      Number(max).toLocaleString();
+      Number(
+        max
+      ).toLocaleString();
 
 
     result +=
@@ -557,7 +753,9 @@ function formatSalary(
   }
 
 
-  if (period) {
+  if (
+    period
+  ) {
 
     result +=
       ` / ${period}`;
@@ -575,7 +773,8 @@ function formatSalary(
 // ========================================
 
 function formatHimalayasJob(
-  job
+  job,
+  options = {}
 ) {
 
   const restrictions =
@@ -676,6 +875,14 @@ function formatHimalayasJob(
 
 
   // ========================================
+  // VISA FLAG
+  // ========================================
+
+  const visaSponsorship =
+    options.visaSponsorship === true;
+
+
+  // ========================================
   // RETURN JOB
   // ========================================
 
@@ -690,7 +897,7 @@ function formatHimalayasJob(
     title:
 
       job.title ||
-      "Remote Job",
+      "Job",
 
     company:
 
@@ -774,7 +981,9 @@ function formatHimalayasJob(
 
     salary:
 
-      formatSalary(job),
+      formatSalary(
+        job
+      ),
 
     contract_type:
 
@@ -807,10 +1016,16 @@ function formatHimalayasJob(
     seniority,
 
     remote:
-      true,
+      visaSponsorship
+        ? false
+        : true,
 
     nigeriaFriendly:
-      true,
+      visaSponsorship
+        ? false
+        : true,
+
+    visaSponsorship,
 
     source:
       "Himalayas",
@@ -825,18 +1040,6 @@ function formatHimalayasJob(
 
 // ========================================
 // GET DIVERSE REMOTE JOBS
-// ========================================
-//
-// IMPORTANT:
-//
-// We DO NOT request all 30 categories
-// simultaneously.
-//
-// Instead we rotate through the categories.
-//
-// This gives the website different types
-// of jobs while reducing API pressure.
-//
 // ========================================
 
 async function getRemoteJobs(
@@ -861,7 +1064,7 @@ async function getRemoteJobs(
   ) {
 
     console.log(
-      "Returning cached jobs"
+      "Returning cached remote jobs"
     );
 
     return cached.jobs;
@@ -884,7 +1087,8 @@ async function getRemoteJobs(
     rawJobs =
       await searchHimalayas(
         search,
-        page
+        page,
+        true
       );
 
   }
@@ -896,14 +1100,14 @@ async function getRemoteJobs(
 
   else {
 
-    // Number of categories per request
     const CATEGORIES_PER_PAGE = 6;
 
 
-    // Rotate categories based on page
     const startIndex =
-      ((page - 1) *
-        CATEGORIES_PER_PAGE) %
+      (
+        (page - 1) *
+        CATEGORIES_PER_PAGE
+      ) %
       JOB_SEARCHES.length;
 
 
@@ -917,7 +1121,9 @@ async function getRemoteJobs(
     ) {
 
       const index =
-        (startIndex + i) %
+        (
+          startIndex + i
+        ) %
         JOB_SEARCHES.length;
 
 
@@ -929,13 +1135,13 @@ async function getRemoteJobs(
 
 
     console.log(
-      "Categories used:",
+      "Remote categories used:",
       selectedCategories
     );
 
 
     // ========================================
-    // ONLY 6 REQUESTS
+    // FETCH ONLY 6 SEARCHES
     // ========================================
 
     const results =
@@ -946,7 +1152,8 @@ async function getRemoteJobs(
 
             searchHimalayas(
               searchTerm,
-              page
+              page,
+              true
             )
 
         )
@@ -958,7 +1165,9 @@ async function getRemoteJobs(
       jobs => {
 
         if (
-          Array.isArray(jobs)
+          Array.isArray(
+            jobs
+          )
         ) {
 
           rawJobs.push(
@@ -974,7 +1183,7 @@ async function getRemoteJobs(
 
 
   console.log(
-    `Raw jobs collected: ${rawJobs.length}`
+    `Raw remote jobs collected: ${rawJobs.length}`
   );
 
 
@@ -994,7 +1203,7 @@ async function getRemoteJobs(
 
 
   // ========================================
-  // NIGERIA-FRIENDLY FILTER
+  // NIGERIA FILTER
   // ========================================
 
   const nigeriaFriendlyJobs =
@@ -1024,7 +1233,14 @@ async function getRemoteJobs(
 
   const jobs =
     nigeriaFriendlyJobs.map(
-      formatHimalayasJob
+      job =>
+        formatHimalayasJob(
+          job,
+          {
+            visaSponsorship:
+              false
+          }
+        )
     );
 
 
@@ -1042,6 +1258,300 @@ async function getRemoteJobs(
       jobs
 
     }
+
+  );
+
+
+  return jobs;
+
+}
+
+
+// ========================================
+// GET VISA SPONSORSHIP JOBS
+// ========================================
+//
+// IMPORTANT:
+//
+// These jobs are NOT restricted to Nigeria.
+//
+// They may be located in:
+//
+// UK
+// Canada
+// USA
+// Australia
+// Europe
+// Other countries
+//
+// The purpose is to find employers/jobs
+// mentioning sponsorship or relocation.
+//
+// ========================================
+
+async function getVisaJobs(
+  search = "",
+  page = 1
+) {
+
+  const cacheKey =
+    `visa-${search.toLowerCase()}-${page}`;
+
+
+  const cached =
+    cache.get(
+      cacheKey
+    );
+
+
+  if (
+    cached &&
+    Date.now() - cached.time <
+      CACHE_TIME
+  ) {
+
+    console.log(
+      "Returning cached visa jobs"
+    );
+
+    return cached.jobs;
+
+  }
+
+
+  let rawJobs = [];
+
+
+  // ========================================
+  // USER VISA SEARCH
+  // ========================================
+
+  if (
+    search &&
+    search.trim()
+  ) {
+
+    rawJobs =
+      await searchHimalayas(
+        `${search} visa sponsorship`,
+        page,
+        false
+      );
+
+  }
+
+
+  // ========================================
+  // DEFAULT VISA SEARCH
+  // ========================================
+
+  else {
+
+    const SEARCHES_PER_PAGE = 6;
+
+
+    const startIndex =
+      (
+        (page - 1) *
+        SEARCHES_PER_PAGE
+      ) %
+      VISA_SEARCHES.length;
+
+
+    const selectedSearches = [];
+
+
+    for (
+      let i = 0;
+      i < SEARCHES_PER_PAGE;
+      i++
+    ) {
+
+      const index =
+        (
+          startIndex + i
+        ) %
+        VISA_SEARCHES.length;
+
+
+      selectedSearches.push(
+        VISA_SEARCHES[index]
+      );
+
+    }
+
+
+    console.log(
+      "Visa searches used:",
+      selectedSearches
+    );
+
+
+    // ========================================
+    // FETCH ONLY 6 SEARCHES
+    // ========================================
+
+    const results =
+      await Promise.all(
+
+        selectedSearches.map(
+          searchTerm =>
+
+            searchHimalayas(
+              searchTerm,
+              page,
+              false
+            )
+
+        )
+
+      );
+
+
+    results.forEach(
+      jobs => {
+
+        if (
+          Array.isArray(
+            jobs
+          )
+        ) {
+
+          rawJobs.push(
+            ...jobs
+          );
+
+        }
+
+      }
+
+    );
+
+  }
+
+
+  console.log(
+    `Raw visa jobs collected: ${rawJobs.length}`
+  );
+
+
+  // ========================================
+  // REMOVE DUPLICATES
+  // ========================================
+
+  rawJobs =
+    removeDuplicates(
+      rawJobs
+    );
+
+
+  console.log(
+    `Visa jobs after duplicates removed: ${rawJobs.length}`
+  );
+
+
+  // ========================================
+  // VISA FILTER
+  // ========================================
+  //
+  // We only keep jobs where the title,
+  // description, excerpt or category
+  // actually mentions sponsorship,
+  // visa, relocation, or related terms.
+  //
+  // ========================================
+
+  const visaJobs =
+    rawJobs.filter(
+      job => {
+
+        const text = (
+
+          `${job.title || ""} ` +
+
+          `${job.description || ""} ` +
+
+          `${job.excerpt || ""} ` +
+
+          `${Array.isArray(job.categories)
+            ? job.categories.join(" ")
+            : ""} ` +
+
+          `${Array.isArray(job.parentCategories)
+            ? job.parentCategories.join(" ")
+            : ""}`
+
+        ).toLowerCase();
+
+
+        const visaKeywords = [
+
+          "visa sponsorship",
+          "visa sponsored",
+          "sponsorship available",
+          "sponsor visa",
+          "work visa",
+          "visa support",
+          "employer sponsorship",
+          "employer sponsored",
+          "skilled worker visa",
+          "skilled worker sponsorship",
+          "relocation assistance",
+          "relocation support",
+          "relocation package",
+          "visa sponsorship available"
+
+        ];
+
+
+        return visaKeywords.some(
+          keyword =>
+            text.includes(
+              keyword
+            )
+        );
+
+      }
+    );
+
+
+  console.log(
+    `Confirmed visa/sponsorship jobs: ${visaJobs.length}`
+  );
+
+
+  // ========================================
+  // FORMAT
+  // ========================================
+
+  const jobs =
+    visaJobs.map(
+      job =>
+        formatHimalayasJob(
+          job,
+          {
+            visaSponsorship:
+              true
+          }
+        )
+    );
+
+
+  // ========================================
+  // CACHE
+  // ========================================
+
+  cache.set(
+    cacheKey,
+    {
+
+      time:
+        Date.now(),
+
+      jobs
+
+    }
+
   );
 
 
@@ -1073,7 +1583,23 @@ app.get(
         "Himalayas",
 
       api:
-        "Free public API"
+        "Free public API",
+
+      endpoints: {
+
+        remote:
+          "/api/jobs/remote",
+
+        jobs:
+          "/api/jobs",
+
+        visa:
+          "/api/jobs/visa",
+
+        debug:
+          "/api/jobs/remote/debug"
+
+      }
 
     });
 
@@ -1129,6 +1655,9 @@ app.get(
 
         page,
 
+        type:
+          "remote",
+
         jobs
 
       });
@@ -1149,6 +1678,89 @@ app.get(
 
         error:
           "Failed to fetch remote jobs",
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ========================================
+// VISA SPONSORSHIP JOBS
+// ========================================
+
+app.get(
+  "/api/jobs/visa",
+  async (req, res) => {
+
+    try {
+
+      const search =
+        String(
+          req.query.search ||
+          ""
+        ).trim();
+
+
+      const page =
+        Math.max(
+
+          1,
+
+          parseInt(
+            req.query.page ||
+            "1",
+            10
+          )
+
+        );
+
+
+      const jobs =
+        await getVisaJobs(
+          search,
+          page
+        );
+
+
+      res.json({
+
+        success:
+          true,
+
+        count:
+          jobs.length,
+
+        page,
+
+        type:
+          "visa-sponsorship",
+
+        jobs
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "Visa jobs error:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        success:
+          false,
+
+        error:
+          "Failed to fetch visa sponsorship jobs",
 
         message:
           error.message
@@ -1319,6 +1931,9 @@ app.get(
           jobs.length,
 
         page,
+
+        type:
+          "remote",
 
         jobs
 

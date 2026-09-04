@@ -36,6 +36,96 @@ const INTERNATIONAL_COUNTRIES = [
 
 /*
 ========================================
+GENERAL REMOTE JOB SEARCH TERMS
+========================================
+
+Used when the user does NOT enter
+a specific job title.
+
+This allows the website to search
+different types of jobs.
+========================================
+*/
+
+const GENERAL_REMOTE_SEARCHES = [
+
+  "remote",
+
+  "work from home",
+
+  "work from anywhere",
+
+  "worldwide remote",
+
+  "international remote",
+
+  "remote customer service",
+
+  "remote customer support",
+
+  "remote data entry",
+
+  "remote data analyst",
+
+  "remote administrative",
+
+  "remote virtual assistant",
+
+  "remote sales",
+
+  "remote marketing",
+
+  "remote social media",
+
+  "remote content writer",
+
+  "remote copywriter",
+
+  "remote graphic designer",
+
+  "remote software developer",
+
+  "remote web developer",
+
+  "remote IT",
+
+  "remote accounting",
+
+  "remote finance",
+
+  "remote human resources",
+
+  "remote recruiter",
+
+  "remote project manager",
+
+  "remote operations",
+
+  "remote research",
+
+  "remote healthcare",
+
+  "remote medical",
+
+  "remote education",
+
+  "remote teacher",
+
+  "remote translator",
+
+  "remote AI",
+
+  "remote artificial intelligence",
+
+  "remote machine learning",
+
+  "remote engineering"
+
+];
+
+
+/*
+========================================
 REMOTE JOB CHECK
 ========================================
 */
@@ -43,35 +133,69 @@ REMOTE JOB CHECK
 function isRemoteJob(job) {
 
   const text = [
+
     job?.title || "",
-    job?.location || "",
+
+    job?.location?.display_name || job?.location || "",
+
     job?.description || ""
+
   ]
     .join(" ")
     .toLowerCase();
 
+
   const remoteWords = [
+
     "remote",
+
     "work from home",
+
     "work-from-home",
+
     "work from anywhere",
+
     "work-from-anywhere",
+
     "worldwide",
+
     "anywhere in the world",
+
     "distributed team",
+
+    "distributed workforce",
+
     "fully remote",
+
     "100% remote",
+
     "remote position",
+
     "remote job",
+
     "home based",
+
     "home-based",
+
     "location independent",
-    "location-independent"
+
+    "location-independent",
+
+    "virtual position",
+
+    "virtual job",
+
+    "telecommute",
+
+    "telecommuting"
+
   ];
+
 
   return remoteWords.some(word =>
     text.includes(word)
   );
+
 }
 
 
@@ -86,18 +210,27 @@ function isNigeriaFriendlyRemoteJob(job) {
   const title =
     String(job?.title || "").toLowerCase();
 
+
   const location =
-    String(job?.location || "").toLowerCase();
+    String(
+      job?.location?.display_name ||
+      job?.location ||
+      ""
+    ).toLowerCase();
+
 
   const description =
-    String(job?.description || "").toLowerCase();
+    String(
+      job?.description || ""
+    ).toLowerCase();
+
 
   const text =
     `${title} ${location} ${description}`;
 
 
   /*
-  MUST BE REMOTE
+  MUST ACTUALLY BE REMOTE
   */
 
   if (!isRemoteJob(job)) {
@@ -106,10 +239,16 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
-  EXPLICIT FOREIGN RESTRICTIONS
+  ========================================
+  EXPLICIT COUNTRY RESTRICTIONS
+  ========================================
   */
 
   const restrictions = [
+
+    /*
+    UNITED STATES
+    */
 
     "us only",
     "usa only",
@@ -122,6 +261,9 @@ function isNigeriaFriendlyRemoteJob(job) {
     "us-based applicants only",
     "usa-based applicants only",
 
+    "us based applicants only",
+    "usa based applicants only",
+
     "must be located in the us",
     "must be located in usa",
     "must be located in the usa",
@@ -131,7 +273,10 @@ function isNigeriaFriendlyRemoteJob(job) {
     "must reside in the usa",
 
     "only applicants located in the us",
+    "only applicants located in usa",
+
     "only available to us residents",
+    "only available to usa residents",
 
     "us work authorization required",
     "usa work authorization required",
@@ -143,12 +288,21 @@ function isNigeriaFriendlyRemoteJob(job) {
     "right to work in usa",
     "right to work in the usa",
 
+    "authorized to work in the us",
+    "authorized to work in usa",
+
+    /*
+    UNITED KINGDOM
+    */
+
     "uk only",
     "u.k. only",
 
     "uk residents only",
+    "u.k. residents only",
 
     "uk-based applicants only",
+    "uk based applicants only",
 
     "must be located in the uk",
     "must reside in the uk",
@@ -161,12 +315,19 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "right to work in the uk",
 
+    "authorized to work in the uk",
+
+    /*
+    CANADA
+    */
+
     "canada only",
 
     "canadian residents only",
     "canada residents only",
 
     "canada-based applicants only",
+    "canada based applicants only",
 
     "must be located in canada",
     "must reside in canada",
@@ -179,11 +340,18 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "right to work in canada",
 
+    "authorized to work in canada",
+
+    /*
+    AUSTRALIA
+    */
+
     "australia only",
 
     "australian residents only",
 
     "australia-based applicants only",
+    "australia based applicants only",
 
     "must be located in australia",
     "must reside in australia",
@@ -196,6 +364,12 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "right to work in australia",
 
+    "authorized to work in australia",
+
+    /*
+    NEW ZEALAND
+    */
+
     "new zealand only",
 
     "new zealand residents only",
@@ -205,17 +379,45 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "right to work in new zealand",
 
+    "authorized to work in new zealand",
+
+    /*
+    EUROPE
+    */
+
     "eu residents only",
     "european residents only",
 
     "eu-based applicants only",
+    "eu based applicants only",
 
     "must be located in the eu",
     "must reside in the eu",
 
     "right to work in the eu",
 
-    "europe work authorization required"
+    "europe work authorization required",
+
+    "european work authorization required",
+
+    /*
+    OTHER COUNTRY RESTRICTIONS
+    */
+
+    "germany only",
+    "france only",
+    "ireland only",
+    "netherlands only",
+    "singapore only",
+    "india only",
+    "south africa only",
+
+    "residents of germany only",
+    "residents of france only",
+    "residents of ireland only",
+    "residents of netherlands only",
+    "residents of singapore only",
+    "residents of india only"
 
   ];
 
@@ -230,72 +432,141 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
-  WORLDWIDE SIGNAL
+  ========================================
+  WORLDWIDE / INTERNATIONAL SIGNALS
+  ========================================
   */
 
   const worldwideWords = [
 
     "worldwide",
+
     "work from anywhere",
+
     "work-from-anywhere",
+
     "anywhere in the world",
+
     "anywhere",
+
     "any location",
+
     "any country",
+
     "global remote",
+
     "globally remote",
+
+    "global workforce",
+
     "international applicants",
+
     "international candidates",
+
     "international applicants welcome",
+
     "international candidates welcome",
+
     "open to international candidates",
+
     "open to international applicants",
+
     "open to applicants worldwide",
+
     "open to candidates worldwide",
+
     "open worldwide",
+
+    "worldwide applicants",
+
+    "worldwide candidates",
+
+    "remote worldwide",
+
+    "remote globally",
+
+    "globally distributed",
+
     "distributed team",
+
     "distributed workforce",
+
     "fully distributed",
+
     "location independent",
-    "location-independent"
+
+    "location-independent",
+
+    "no geographic restrictions",
+
+    "no geographical restrictions",
+
+    "all locations",
+
+    "all countries",
+
+    "global applicants",
+
+    "global candidates"
 
   ];
 
 
   /*
-  NIGERIA / AFRICA SIGNAL
+  ========================================
+  NIGERIA / AFRICA SIGNALS
+  ========================================
   */
 
   const africaWords = [
 
     "nigeria",
+
     "nigerian",
 
     "nigeria-based",
+
     "nigeria based",
 
     "africa",
+
     "african",
 
     "africa-based",
+
     "africa based",
 
     "sub-saharan africa",
 
+    "sub saharan africa",
+
     "west africa",
+
     "east africa",
 
     "ghana",
+
     "kenya",
+
     "egypt",
+
     "morocco",
-    "south africa"
+
+    "south africa",
+
+    "african countries",
+
+    "african applicants",
+
+    "african candidates"
 
   ];
 
 
   /*
-  PHYSICAL RESTRICTIONS
+  ========================================
+  PHYSICAL REMOTE RESTRICTIONS
+  ========================================
   */
 
   const physicalRestrictions = [
@@ -317,13 +588,28 @@ function isNigeriaFriendlyRemoteJob(job) {
     "remote - uk",
     "remote, uk",
 
+    "remote: uk",
+
     "remote in canada",
     "remote - canada",
     "remote, canada",
 
+    "remote: canada",
+
     "remote in australia",
     "remote - australia",
-    "remote, australia"
+    "remote, australia",
+
+    "remote: australia",
+
+    "remote in germany",
+    "remote - germany",
+
+    "remote in france",
+    "remote - france",
+
+    "remote in ireland",
+    "remote - ireland"
 
   ];
 
@@ -338,7 +624,9 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
-  ACCEPT WORLDWIDE
+  ========================================
+  WORLDWIDE = ACCEPT
+  ========================================
   */
 
   if (
@@ -351,7 +639,9 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
-  ACCEPT NIGERIA / AFRICA
+  ========================================
+  NIGERIA / AFRICA = ACCEPT
+  ========================================
   */
 
   if (
@@ -364,13 +654,20 @@ function isNigeriaFriendlyRemoteJob(job) {
 
 
   /*
+  ========================================
   GENERIC REMOTE
+  ========================================
 
-  If there is no explicit restriction,
-  allow the remote job.
+  If the job is genuinely remote and
+  contains no explicit country restriction,
+  allow it.
+
+  This prevents us from unnecessarily
+  removing legitimate remote jobs.
   */
 
   return true;
+
 }
 
 
@@ -387,19 +684,25 @@ function removeDuplicates(jobs) {
   return jobs.filter(job => {
 
     const key =
-      job.id ||
-      `${job.title}-${job.company}-${job.url}`
-        .toLowerCase();
+      String(
+        job.id ||
+        `${job.title}-${job.company}-${job.url}`
+      )
+        .toLowerCase()
+        .trim();
+
 
     if (seen.has(key)) {
       return false;
     }
+
 
     seen.add(key);
 
     return true;
 
   });
+
 }
 
 
@@ -418,7 +721,8 @@ function formatJob(job) {
       `${job.title}-${job.company?.display_name || ""}`,
 
     title:
-      job.title || "Untitled job",
+      job.title ||
+      "Untitled job",
 
     company:
       job.company?.display_name ||
@@ -426,21 +730,24 @@ function formatJob(job) {
 
     location:
       job.location?.display_name ||
-      "Not specified",
+      "Remote",
 
     description:
-      job.description || "",
+      job.description ||
+      "",
 
     salary:
-      job.salary_min
+      job.salary_min != null
         ? `${job.salary_min} - ${job.salary_max || ""}`
         : "Not specified",
 
     url:
-      job.redirect_url || "",
+      job.redirect_url ||
+      "",
 
     created:
-      job.created || null,
+      job.created ||
+      null,
 
     remote:
       true,
@@ -449,6 +756,7 @@ function formatJob(job) {
       true
 
   };
+
 }
 
 
@@ -518,6 +826,7 @@ async function getJobs(
       text.substring(0, 500)
     );
 
+
     throw new Error(
       `Adzuna ${response.status}: ${text.substring(0, 500)}`
     );
@@ -526,6 +835,7 @@ async function getJobs(
 
 
   let data;
+
 
   try {
 
@@ -554,41 +864,98 @@ async function getJobs(
 
 
   return jobs;
+
 }
 
 
 /*
 ========================================
-GET INTERNATIONAL REMOTE JOBS
+GET ALL TYPES OF WORLDWIDE REMOTE JOBS
 ========================================
 */
 
 async function getRemoteJobs(search) {
 
-  const safeSearch =
-    String(search || "customer support").trim();
+  const userSearch =
+    String(search || "").trim();
 
 
-  if (!safeSearch) {
-    return [];
+  /*
+  ========================================
+  IF USER SEARCHES A SPECIFIC JOB
+  ========================================
+
+  Example:
+
+  data analyst
+
+  nurse
+
+  graphic designer
+
+  accountant
+
+  teacher
+
+  etc.
+  */
+
+  let searchTerms;
+
+
+  if (userSearch) {
+
+    searchTerms = [
+
+      userSearch,
+
+      `${userSearch} remote`,
+
+      `${userSearch} work from home`,
+
+      `${userSearch} work from anywhere`,
+
+      `${userSearch} worldwide`,
+
+      `${userSearch} international remote`
+
+    ];
+
   }
 
 
-  const searchTerms = [
+  /*
+  ========================================
+  IF SEARCH BOX IS EMPTY
+  ========================================
 
-    safeSearch,
+  Search many different job fields.
+  */
 
-    `${safeSearch} remote`,
+  else {
 
-    `${safeSearch} work from home`,
+    searchTerms =
+      GENERAL_REMOTE_SEARCHES;
 
-    `${safeSearch} work from anywhere`
+  }
 
-  ];
+
+  /*
+  Remove duplicate search terms
+  */
+
+  searchTerms =
+    [...new Set(searchTerms)];
 
 
   const results = [];
 
+
+  /*
+  ========================================
+  SEARCH ALL INTERNATIONAL COUNTRIES
+  ========================================
+  */
 
   for (
     const country
@@ -610,35 +977,50 @@ async function getRemoteJobs(search) {
           );
 
 
-        const formatted =
-          jobs
-            .map(formatJob)
-            .filter(Boolean);
+        /*
+        IMPORTANT:
 
+        Filter the ORIGINAL Adzuna job
+        before formatting it.
+
+        This makes the remote check more
+        reliable.
+        */
 
         const filtered =
-          formatted.filter(
+          jobs.filter(
             isNigeriaFriendlyRemoteJob
           );
 
 
+        const formatted =
+          filtered.map(
+            formatJob
+          );
+
+
         console.log(
+
           `${country} | ${keyword} | ` +
           `found: ${jobs.length} | ` +
-          `accepted: ${filtered.length}`
+          `accepted: ${formatted.length}`
+
         );
 
 
         results.push(
-          ...filtered
+          ...formatted
         );
 
 
       } catch (error) {
 
         console.error(
+
           `Remote ${country} search failed:`,
+
           error.message
+
         );
 
       }
@@ -648,7 +1030,10 @@ async function getRemoteJobs(search) {
   }
 
 
-  return removeDuplicates(results);
+  return removeDuplicates(
+    results
+  );
+
 }
 
 
@@ -663,7 +1048,9 @@ function isVisaJob(job) {
   const text = (
 
     `${job?.title || ""} ` +
-    `${job?.location || ""} ` +
+
+    `${job?.location?.display_name || job?.location || ""} ` +
+
     `${job?.description || ""}`
 
   ).toLowerCase();
@@ -672,21 +1059,44 @@ function isVisaJob(job) {
   const visaWords = [
 
     "visa sponsorship",
+
     "visa sponsor",
+
     "sponsorship available",
+
     "visa sponsorship available",
+
     "sponsorship provided",
+
     "visa provided",
+
     "work visa",
+
     "work permit",
+
     "skilled worker visa",
+
     "skilled worker",
+
     "tier 2 visa",
+
     "sponsor visa",
+
     "employer sponsorship",
+
     "employer sponsored",
+
+    "visa support",
+
+    "visa assistance",
+
+    "immigration sponsorship",
+
     "relocation assistance",
-    "relocation package"
+
+    "relocation package",
+
+    "relocation support"
 
   ];
 
@@ -694,6 +1104,7 @@ function isVisaJob(job) {
   return visaWords.some(
     word => text.includes(word)
   );
+
 }
 
 
@@ -703,25 +1114,27 @@ GET VISA SPONSORSHIP JOBS
 ========================================
 */
 
-async function getVisaJobs(search, location = "") {
+async function getVisaJobs(
+  search,
+  location = ""
+) {
 
   const safeSearch =
-    String(search || "customer support").trim();
+    String(
+      search || "customer support"
+    ).trim();
 
 
   const safeLocation =
-    String(location || "").trim();
+    String(
+      location || ""
+    ).trim();
 
 
   if (!safeSearch) {
     return [];
   }
 
-
-  /*
-  Search several variations because
-  employers use different wording.
-  */
 
   const searchTerms = [
 
@@ -733,7 +1146,11 @@ async function getVisaJobs(search, location = "") {
 
     `${safeSearch} skilled worker`,
 
-    `${safeSearch} visa`
+    `${safeSearch} visa`,
+
+    `${safeSearch} employer sponsorship`,
+
+    `${safeSearch} relocation`
 
   ];
 
@@ -742,8 +1159,9 @@ async function getVisaJobs(search, location = "") {
 
 
   /*
-  If the user selected a specific country,
-  search that country first.
+  ========================================
+  COUNTRY MAP
+  ========================================
   */
 
   let countries =
@@ -760,42 +1178,65 @@ async function getVisaJobs(search, location = "") {
 
       uk: "gb",
       gb: "gb",
+
       usa: "us",
       us: "us",
+
       canada: "ca",
       ca: "ca",
+
       australia: "au",
       au: "au",
+
       "new zealand": "nz",
       nz: "nz",
+
       germany: "de",
       de: "de",
+
       france: "fr",
       fr: "fr",
+
       netherlands: "nl",
       nl: "nl",
+
       ireland: "ie",
       ie: "ie",
+
       "south africa": "za",
       za: "za",
+
       singapore: "sg",
       sg: "sg",
+
       india: "in",
       in: "in"
 
     };
 
 
-    if (countryMap[locationLower]) {
+    if (
+      countryMap[locationLower]
+    ) {
 
       countries = [
-        countryMap[locationLower]
+
+        countryMap[
+          locationLower
+        ]
+
       ];
 
     }
 
   }
 
+
+  /*
+  ========================================
+  SEARCH
+  ========================================
+  */
 
   for (
     const country
@@ -817,35 +1258,44 @@ async function getVisaJobs(search, location = "") {
           );
 
 
-        const formatted =
-          jobs
-            .map(formatJob)
-            .filter(Boolean);
-
+        /*
+        Check original Adzuna data
+        */
 
         const filtered =
-          formatted.filter(
+          jobs.filter(
             isVisaJob
           );
 
 
+        const formatted =
+          filtered.map(
+            formatJob
+          );
+
+
         console.log(
+
           `${country} | ${keyword} | ` +
           `found: ${jobs.length} | ` +
-          `visa accepted: ${filtered.length}`
+          `visa accepted: ${formatted.length}`
+
         );
 
 
         results.push(
-          ...filtered
+          ...formatted
         );
 
 
       } catch (error) {
 
         console.error(
+
           `Visa ${country} search failed:`,
+
           error.message
+
         );
 
       }
@@ -855,7 +1305,10 @@ async function getVisaJobs(search, location = "") {
   }
 
 
-  return removeDuplicates(results);
+  return removeDuplicates(
+    results
+  );
+
 }
 
 
@@ -865,21 +1318,24 @@ HEALTH CHECK
 ========================================
 */
 
-app.get("/", (req, res) => {
+app.get(
+  "/",
+  (req, res) => {
 
-  res.json({
+    res.json({
 
-    success: true,
+      success: true,
 
-    message:
-      "Nigeria Remote Jobs API is running",
+      message:
+        "Nigeria Remote Jobs API is running",
 
-    status:
-      "online"
+      status:
+        "online"
 
-  });
+    });
 
-});
+  }
+);
 
 
 /*
@@ -896,20 +1352,40 @@ app.get(
 
       const search =
         String(
-          req.query.search ||
-          "customer support"
+          req.query.search || ""
         ).trim();
 
 
+      console.log(
+        "========================================"
+      );
+
+      console.log(
+        "REMOTE JOB REQUEST"
+      );
+
+      console.log(
+        "Search:",
+        search || "ALL REMOTE JOB FIELDS"
+      );
+
+      console.log(
+        "========================================"
+      );
+
+
       const jobs =
-        await getRemoteJobs(search);
+        await getRemoteJobs(
+          search
+        );
 
 
       res.json({
 
         success: true,
 
-        count: jobs.length,
+        count:
+          jobs.length,
 
         jobs
 
@@ -930,7 +1406,7 @@ app.get(
 
         error:
           error.message ||
-          "Failed to fetch jobs",
+          "Failed to fetch remote jobs",
 
         jobs: []
 
@@ -969,6 +1445,10 @@ app.get(
 
 
       console.log(
+        "========================================"
+      );
+
+      console.log(
         "VISA JOB REQUEST"
       );
 
@@ -980,6 +1460,10 @@ app.get(
       console.log(
         "Location:",
         location || "Worldwide"
+      );
+
+      console.log(
+        "========================================"
       );
 
 
@@ -994,7 +1478,8 @@ app.get(
 
         success: true,
 
-        count: jobs.length,
+        count:
+          jobs.length,
 
         jobs
 
@@ -1032,11 +1517,15 @@ app.get(
 GENERAL JOB API
 ========================================
 
-This supports frontend requests such as:
+Examples:
 
-/api/jobs?search=data%20analyst&type=visa
+/api/jobs?type=remote
 
-/api/jobs?search=customer%20support&type=remote
+/api/jobs?search=data%20analyst&type=remote
+
+/api/jobs?search=graphic%20designer&type=remote
+
+/api/jobs?search=nurse&type=visa
 
 /api/jobs?search=data%20analyst&type=visa&location=uk
 ========================================
@@ -1050,8 +1539,7 @@ app.get(
 
       const search =
         String(
-          req.query.search ||
-          "customer support"
+          req.query.search || ""
         ).trim();
 
 
@@ -1059,7 +1547,9 @@ app.get(
         String(
           req.query.type ||
           "remote"
-        ).trim().toLowerCase();
+        )
+          .trim()
+          .toLowerCase();
 
 
       const location =
@@ -1079,7 +1569,7 @@ app.get(
 
       console.log(
         "Search:",
-        search
+        search || "ALL REMOTE JOBS"
       );
 
       console.log(
@@ -1100,19 +1590,39 @@ app.get(
       let jobs = [];
 
 
+      /*
+      ========================================
+      VISA
+      ========================================
+      */
+
       if (
+
         type === "visa" ||
+
         type === "sponsorship" ||
+
         type === "visa sponsorship"
+
       ) {
 
         jobs =
           await getVisaJobs(
-            search,
+            search ||
+            "customer support",
             location
           );
 
-      } else {
+      }
+
+
+      /*
+      ========================================
+      REMOTE
+      ========================================
+      */
+
+      else {
 
         jobs =
           await getRemoteJobs(
@@ -1126,7 +1636,8 @@ app.get(
 
         success: true,
 
-        count: jobs.length,
+        count:
+          jobs.length,
 
         jobs
 

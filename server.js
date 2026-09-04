@@ -36,8 +36,9 @@ const CACHE_TIME =
 // REMOTE JOB CATEGORIES
 // ========================================
 //
-// These searches are intentionally broad.
-// The goal is NOT to return only tech jobs.
+// Broad categories.
+// These are rotated to avoid sending
+// too many API requests at once.
 //
 // ========================================
 
@@ -53,7 +54,7 @@ const JOB_SEARCHES = [
   "customer support",
   "technical support",
 
-  // Virtual assistance / administration
+  // Virtual assistance
   "virtual assistant",
   "administrative",
   "operations",
@@ -64,12 +65,12 @@ const JOB_SEARCHES = [
   "data annotation",
   "AI",
 
-  // Writing / communication
+  // Writing
   "writer",
   "content",
   "copywriter",
 
-  // Marketing / sales
+  // Marketing / Sales
   "marketing",
   "social media",
   "sales",
@@ -89,7 +90,7 @@ const JOB_SEARCHES = [
   "tutor",
   "education",
 
-  // Healthcare / medical
+  // Healthcare
   "healthcare",
   "medical",
   "clinical",
@@ -97,18 +98,18 @@ const JOB_SEARCHES = [
   // Research
   "research",
 
-  // HR / recruitment
+  // HR
   "human resources",
   "recruiter",
 
   // E-commerce
   "ecommerce",
 
-  // Project / business
+  // Business
   "project manager",
   "business",
 
-  // General remote work
+  // General remote
   "remote"
 
 ];
@@ -196,16 +197,16 @@ function getLocationRestrictions(job) {
 // CHECK NIGERIA ELIGIBILITY
 // ========================================
 //
-// Accepted:
+// ACCEPT:
 //
-// 1. Worldwide job
-// 2. Nigeria-specific job
-// 3. Africa-wide job
+// 1. Worldwide
+// 2. Nigeria
+// 3. Africa
 //
-// Rejected:
+// REJECT:
 //
-// Jobs explicitly restricted to countries
-// that do not include Nigeria.
+// Explicit countries that do not
+// include Nigeria.
 //
 // ========================================
 
@@ -215,14 +216,20 @@ function checkNigeriaFriendlyJob(job) {
     getLocationRestrictions(job);
 
 
-  // Empty restrictions means worldwide
+  // ========================================
+  // WORLDWIDE
+  // ========================================
+
   if (
     restrictions.length === 0
   ) {
 
     return {
+
       accepted: true,
+
       reason: "worldwide"
+
     };
 
   }
@@ -276,8 +283,11 @@ function checkNigeriaFriendlyJob(job) {
   if (nigeria) {
 
     return {
+
       accepted: true,
+
       reason: "nigeria"
+
     };
 
   }
@@ -308,8 +318,11 @@ function checkNigeriaFriendlyJob(job) {
   if (africa) {
 
     return {
+
       accepted: true,
+
       reason: "africa"
+
     };
 
   }
@@ -348,9 +361,16 @@ async function searchHimalayas(
       );
 
 
-    // Nigeria search returns jobs
-    // available to Nigeria, including
+    // ========================================
+    // IMPORTANT
+    // ========================================
+    //
+    // country=NG asks Himalayas for jobs
+    // available in Nigeria, including
     // worldwide jobs.
+    //
+    // ========================================
+
     url.searchParams.set(
       "country",
       "NG"
@@ -383,7 +403,7 @@ async function searchHimalayas(
 
 
     console.log(
-      "Himalayas:",
+      "Himalayas search:",
       search || "all"
     );
 
@@ -432,7 +452,6 @@ async function searchHimalayas(
       error.message
     );
 
-
     return [];
 
   }
@@ -479,6 +498,74 @@ function removeDuplicates(
 
     }
   );
+
+}
+
+
+// ========================================
+// FORMAT SALARY
+// ========================================
+
+function formatSalary(
+  job
+) {
+
+  const min =
+    job.minSalary;
+
+  const max =
+    job.maxSalary;
+
+  const currency =
+    job.currency || "";
+
+  const period =
+    job.salaryPeriod || "";
+
+
+  if (
+    min === null ||
+    min === undefined
+  ) {
+
+    return "Salary not specified";
+
+  }
+
+
+  const formattedMin =
+    Number(min).toLocaleString();
+
+
+  let result =
+    `${currency} ${formattedMin}`;
+
+
+  if (
+    max !== null &&
+    max !== undefined &&
+    max !== ""
+  ) {
+
+    const formattedMax =
+      Number(max).toLocaleString();
+
+
+    result +=
+      ` - ${formattedMax}`;
+
+  }
+
+
+  if (period) {
+
+    result +=
+      ` / ${period}`;
+
+  }
+
+
+  return result.trim();
 
 }
 
@@ -600,32 +687,26 @@ function formatHimalayasJob(
 
       `${job.companySlug || "company"}-${job.title || "job"}`,
 
-
     title:
 
       job.title ||
       "Remote Job",
-
 
     company:
 
       job.companyName ||
       "Company not specified",
 
-
     companyLogo:
 
       job.companyLogo ||
       "",
 
-
     location,
-
 
     locationRestrictions:
 
       restrictions,
-
 
     timezoneRestrictions:
 
@@ -637,9 +718,7 @@ function formatHimalayasJob(
 
         : [],
 
-
     description,
-
 
     excerpt:
 
@@ -648,12 +727,10 @@ function formatHimalayasJob(
         ""
       ),
 
-
     url:
 
       job.applicationLink ||
       "",
-
 
     created:
 
@@ -665,7 +742,6 @@ function formatHimalayasJob(
 
         : "",
 
-
     expiryDate:
 
       job.expiryDate
@@ -676,85 +752,68 @@ function formatHimalayasJob(
 
         : "",
 
-
     salary_min:
 
       job.minSalary ??
       null,
-
 
     salary_max:
 
       job.maxSalary ??
       null,
 
-
     salary_period:
 
       job.salaryPeriod ||
       "",
-
 
     currency:
 
       job.currency ||
       "",
 
-
-    // Frontend compatibility
     salary:
 
       formatSalary(job),
-
 
     contract_type:
 
       job.employmentType ||
       "",
 
-
     contract_time:
 
       job.employmentType ||
       "",
-
 
     type:
 
       job.employmentType ||
       "Full-time",
 
-
     employmentType:
 
       job.employmentType ||
       "",
 
-
     category:
 
       categories,
-
 
     parentCategory:
 
       parentCategories,
 
-
     seniority,
-
 
     remote:
       true,
 
-
     nigeriaFriendly:
       true,
 
-
     source:
       "Himalayas",
-
 
     sourceUrl:
       "https://himalayas.app/"
@@ -765,80 +824,19 @@ function formatHimalayasJob(
 
 
 // ========================================
-// FORMAT SALARY
-// ========================================
-
-function formatSalary(
-  job
-) {
-
-  const min =
-    job.minSalary;
-
-
-  const max =
-    job.maxSalary;
-
-
-  const currency =
-    job.currency ||
-    "";
-
-
-  const period =
-    job.salaryPeriod ||
-    "";
-
-
-  if (
-    min === null ||
-    min === undefined
-  ) {
-
-    return "Salary not specified";
-
-  }
-
-
-  const formattedMin =
-    Number(min).toLocaleString();
-
-
-  let result =
-    `${currency} ${formattedMin}`;
-
-
-  if (
-    max !== null &&
-    max !== undefined &&
-    max !== ""
-  ) {
-
-    const formattedMax =
-      Number(max).toLocaleString();
-
-
-    result +=
-      ` - ${formattedMax}`;
-
-  }
-
-
-  if (period) {
-
-    result +=
-      ` / ${period}`;
-
-  }
-
-
-  return result.trim();
-
-}
-
-
-// ========================================
 // GET DIVERSE REMOTE JOBS
+// ========================================
+//
+// IMPORTANT:
+//
+// We DO NOT request all 30 categories
+// simultaneously.
+//
+// Instead we rotate through the categories.
+//
+// This gives the website different types
+// of jobs while reducing API pressure.
+//
 // ========================================
 
 async function getRemoteJobs(
@@ -877,11 +875,6 @@ async function getRemoteJobs(
   // ========================================
   // USER SEARCH
   // ========================================
-  //
-  // If user searches something specific,
-  // use that search directly.
-  //
-  // ========================================
 
   if (
     search &&
@@ -898,24 +891,64 @@ async function getRemoteJobs(
 
 
   // ========================================
-  // NO SPECIFIC SEARCH
-  // ========================================
-  //
-  // Pull jobs from different categories.
-  //
+  // NO SEARCH
   // ========================================
 
   else {
 
+    // Number of categories per request
+    const CATEGORIES_PER_PAGE = 6;
+
+
+    // Rotate categories based on page
+    const startIndex =
+      ((page - 1) *
+        CATEGORIES_PER_PAGE) %
+      JOB_SEARCHES.length;
+
+
+    const selectedCategories = [];
+
+
+    for (
+      let i = 0;
+      i < CATEGORIES_PER_PAGE;
+      i++
+    ) {
+
+      const index =
+        (startIndex + i) %
+        JOB_SEARCHES.length;
+
+
+      selectedCategories.push(
+        JOB_SEARCHES[index]
+      );
+
+    }
+
+
+    console.log(
+      "Categories used:",
+      selectedCategories
+    );
+
+
+    // ========================================
+    // ONLY 6 REQUESTS
+    // ========================================
+
     const results =
       await Promise.all(
 
-        JOB_SEARCHES.map(
+        selectedCategories.map(
           searchTerm =>
+
             searchHimalayas(
               searchTerm,
               page
             )
+
         )
 
       );
@@ -986,7 +1019,7 @@ async function getRemoteJobs(
 
 
   // ========================================
-  // FORMAT JOBS
+  // FORMAT
   // ========================================
 
   const jobs =
@@ -1002,10 +1035,12 @@ async function getRemoteJobs(
   cache.set(
     cacheKey,
     {
+
       time:
         Date.now(),
 
       jobs
+
     }
   );
 
@@ -1209,7 +1244,6 @@ app.get(
           results
 
       });
-
 
     } catch (error) {
 

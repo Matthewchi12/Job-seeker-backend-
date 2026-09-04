@@ -169,19 +169,21 @@ REMOTE JOB CHECK
 
 function isRemoteJob(job) {
 
-  const title = String(job?.title || "").toLowerCase();
+  const title =
+    String(job?.title || "").toLowerCase();
 
-  const location = String(
-    job?.location?.display_name ||
-    job?.location ||
-    ""
-  ).toLowerCase();
+  const location =
+    String(
+      job?.location?.display_name ||
+      job?.location ||
+      ""
+    ).toLowerCase();
 
-  const description = String(
-    job?.description || ""
-  ).toLowerCase();
+  const description =
+    String(job?.description || "").toLowerCase();
 
-  const text = `${title} ${location} ${description}`;
+  const text =
+    `${title} ${location} ${description}`;
 
   const remoteSignals = [
 
@@ -197,6 +199,7 @@ function isRemoteJob(job) {
     "virtual",
     "telecommute",
     "telecommuting"
+
   ];
 
   return remoteSignals.some(
@@ -207,43 +210,48 @@ function isRemoteJob(job) {
 
 /*
 ========================================
-NIGERIA-FRIENDLY REMOTE JOB CHECK
+NIGERIA / AFRICA FRIENDLY REMOTE JOB
 ========================================
 
-ONLY accept jobs that appear suitable for
-someone working remotely from Nigeria.
+A job must:
 
-We reject explicit country restrictions.
+1. Actually be remote.
 
-We require:
-- Nigeria signal
-OR
-- Africa signal
-OR
-- Worldwide/international signal
+2. NOT contain obvious country restrictions.
+
+3. Have strong evidence that applicants
+   can work from:
+
+   - Nigeria
+   - Africa
+   - Worldwide / anywhere
+
+Generic "remote" jobs are NOT accepted.
 ========================================
 */
 
 function isNigeriaFriendlyRemoteJob(job) {
 
-  const title = String(job?.title || "").toLowerCase();
+  const title =
+    String(job?.title || "").toLowerCase();
 
-  const location = String(
-    job?.location?.display_name ||
-    job?.location ||
-    ""
-  ).toLowerCase();
+  const location =
+    String(
+      job?.location?.display_name ||
+      job?.location ||
+      ""
+    ).toLowerCase();
 
-  const description = String(
-    job?.description || ""
-  ).toLowerCase();
+  const description =
+    String(job?.description || "").toLowerCase();
 
-  const text = `${title} ${location} ${description}`;
+  const text =
+    `${title} ${location} ${description}`;
 
 
   /*
   ========================================
-  MUST BE REMOTE
+  1. MUST ACTUALLY BE REMOTE
   ========================================
   */
 
@@ -254,13 +262,16 @@ function isNigeriaFriendlyRemoteJob(job) {
 
   /*
   ========================================
-  EXPLICIT COUNTRY RESTRICTIONS
+  2. HARD COUNTRY RESTRICTIONS
+  ========================================
+
+  These are rejected immediately.
   ========================================
   */
 
   const restrictions = [
 
-    // United States
+    // USA
 
     "us only",
     "usa only",
@@ -292,6 +303,7 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "only applicants located in the us",
     "only applicants located in usa",
+    "only applicants located in the usa",
 
     "only available to us residents",
     "only available to usa residents",
@@ -311,7 +323,7 @@ function isNigeriaFriendlyRemoteJob(job) {
     "authorized to work in the usa",
 
 
-    // United Kingdom
+    // UK
 
     "uk only",
     "u.k. only",
@@ -334,11 +346,9 @@ function isNigeriaFriendlyRemoteJob(job) {
     "only applicants located in the uk",
 
     "uk work authorization required",
-
     "must have uk work authorization",
 
     "right to work in the uk",
-
     "authorized to work in the uk",
 
 
@@ -364,11 +374,9 @@ function isNigeriaFriendlyRemoteJob(job) {
     "only applicants located in canada",
 
     "canadian work authorization required",
-
     "must have canadian work authorization",
 
     "right to work in canada",
-
     "authorized to work in canada",
 
 
@@ -394,7 +402,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "australian work authorization required",
 
     "right to work in australia",
-
     "authorized to work in australia",
 
 
@@ -408,7 +415,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "must reside in new zealand",
 
     "right to work in new zealand",
-
     "authorized to work in new zealand",
 
 
@@ -430,7 +436,6 @@ function isNigeriaFriendlyRemoteJob(job) {
     "right to work in the eu",
 
     "europe work authorization required",
-
     "european work authorization required",
 
 
@@ -481,14 +486,9 @@ function isNigeriaFriendlyRemoteJob(job) {
 
     "remote - ireland",
     "remote, ireland"
+
   ];
 
-
-  /*
-  ========================================
-  REJECT EXPLICIT RESTRICTIONS
-  ========================================
-  */
 
   if (
     restrictions.some(
@@ -501,31 +501,51 @@ function isNigeriaFriendlyRemoteJob(job) {
 
   /*
   ========================================
-  NIGERIA SIGNALS
+  3. NIGERIA SIGNALS
   ========================================
   */
 
   const nigeriaSignals = [
 
-    "nigeria",
-    "nigerian",
-
-    "nigeria-based",
-    "nigeria based",
-
-    "based in nigeria",
-    "located in nigeria",
+    "remote nigeria",
+    "remote - nigeria",
+    "remote, nigeria",
 
     "remote from nigeria",
 
     "work from nigeria",
+    "work-from-nigeria",
+
     "working from nigeria",
+    "working-from-nigeria",
+
+    "based in nigeria",
+
+    "located in nigeria",
+
+    "nigeria-based",
+    "nigeria based",
 
     "nigerian applicants",
     "nigerian candidates",
 
     "nigeria applicants",
-    "nigeria candidates"
+    "nigeria candidates",
+
+    "open to nigerians",
+
+    "open to nigerian applicants",
+    "open to nigerian candidates",
+
+    "hire in nigeria",
+    "hiring in nigeria",
+
+    "employees in nigeria",
+
+    "available in nigeria",
+
+    "nigeria remote"
+
   ];
 
 
@@ -540,32 +560,59 @@ function isNigeriaFriendlyRemoteJob(job) {
 
   /*
   ========================================
-  AFRICA SIGNALS
+  4. AFRICA SIGNALS
+  ========================================
+
+  These indicate that the employer accepts
+  remote workers from Africa.
+
+  We deliberately DO NOT use just
+  "africa" or "african" because a job may
+  merely mention Africa in its description.
   ========================================
   */
 
   const africaSignals = [
 
-    "africa",
-    "african",
+    "remote africa",
+    "remote - africa",
+    "remote, africa",
+
+    "remote from africa",
+
+    "work from africa",
+    "work-from-africa",
+
+    "working from africa",
 
     "africa-based",
     "africa based",
 
     "based in africa",
 
-    "remote africa",
-    "remote - africa",
-    "remote, africa",
+    "located in africa",
 
     "african applicants",
     "african candidates",
+
+    "open to africans",
+
+    "open to african applicants",
+    "open to african candidates",
+
+    "hire in africa",
+    "hiring in africa",
+
+    "employees in africa",
+
+    "available in africa",
 
     "sub-saharan africa",
     "sub saharan africa",
 
     "west africa",
     "east africa"
+
   ];
 
 
@@ -580,61 +627,81 @@ function isNigeriaFriendlyRemoteJob(job) {
 
   /*
   ========================================
-  WORLDWIDE / INTERNATIONAL SIGNALS
+  5. WORLDWIDE REMOTE SIGNALS
+  ========================================
+
+  Worldwide means someone in Nigeria can
+  potentially work from Nigeria.
+
+  We DO NOT accept weak phrases such as:
+
+  "global team"
+  "distributed team"
+  "international company"
+
+  because those do not prove that Nigerians
+  can apply.
   ========================================
   */
 
   const worldwideSignals = [
 
-    "worldwide",
-
-    "remote worldwide",
-
     "work from anywhere",
+
     "work-from-anywhere",
 
     "anywhere in the world",
+
     "anywhere around the world",
+
+    "remote worldwide",
+
+    "worldwide remote",
 
     "open worldwide",
 
     "open to applicants worldwide",
+
     "open to candidates worldwide",
 
     "worldwide applicants",
+
     "worldwide candidates",
 
-    "international applicants",
-    "international candidates",
-
-    "international applicants welcome",
-    "international candidates welcome",
-
     "open to international applicants",
+
     "open to international candidates",
 
-    "global remote",
-    "remote globally",
-    "globally remote",
+    "international applicants welcome",
+
+    "international candidates welcome",
+
+    "open to applicants globally",
+
+    "open to candidates globally",
 
     "global applicants",
+
     "global candidates",
 
-    "globally distributed",
-    "distributed team",
-    "distributed workforce",
+    "remote globally",
 
-    "fully distributed",
+    "globally remote",
 
     "location independent",
+
     "location-independent",
 
     "no geographic restrictions",
+
     "no geographical restrictions",
 
     "any country",
+
     "all countries",
+
     "all locations"
+
   ];
 
 
@@ -649,18 +716,18 @@ function isNigeriaFriendlyRemoteJob(job) {
 
   /*
   ========================================
-  IMPORTANT
+  6. GENERIC REMOTE = REJECT
+  ========================================
 
-  Generic remote jobs are NOT accepted.
+  Example:
 
-  This prevents jobs such as:
+  "Remote"
+  "Work from home"
+  "Remote - London"
+  "Remote - Orlando"
 
-  Work From Home
-  Orlando, Florida
-
-  from being shown unless there is evidence
-  that international/Nigeria/Africa applicants
-  can work there.
+  Without Nigeria/Africa/worldwide evidence,
+  it is rejected.
   ========================================
   */
 
@@ -750,6 +817,7 @@ function formatJob(job) {
     remote: true,
 
     nigeriaFriendly: true
+
   };
 }
 
@@ -786,7 +854,8 @@ async function getJobs(
       `&what=${encodeURIComponent(keyword)}`;
 
 
-    const response = await fetch(url);
+    const response =
+      await fetch(url);
 
 
     if (!response.ok) {
@@ -801,7 +870,8 @@ async function getJobs(
     }
 
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
 
     return Array.isArray(data.results)
@@ -822,7 +892,8 @@ async function getJobs(
 
 /*
 ========================================
-GET NIGERIA-FRIENDLY REMOTE JOBS
+GET NIGERIA / AFRICA FRIENDLY
+REMOTE JOBS
 ========================================
 */
 
@@ -846,19 +917,24 @@ async function getRemoteJobs(search = "") {
     searches = [
 
       `${userSearch} remote Nigeria`,
+
       `${userSearch} remote Africa`,
+
       `${userSearch} worldwide remote`,
+
       `${userSearch} work from anywhere`,
-      `${userSearch} international remote`,
-      `${userSearch} remote international`,
+
+      `${userSearch} international applicants`,
+
       `${userSearch} remote`
+
     ];
 
   } else {
 
     /*
     ========================================
-    DEFAULT BROAD REMOTE SEARCH
+    DEFAULT BROAD SEARCH
     ========================================
     */
 
@@ -867,25 +943,37 @@ async function getRemoteJobs(search = "") {
       "remote Nigeria",
       "remote Africa",
       "worldwide remote",
-      "international remote",
       "work from anywhere",
 
+      // Customer service
       "customer service remote",
       "customer support remote",
+
+      // Virtual assistant
       "virtual assistant remote",
+
+      // Data
       "data entry remote",
       "data analyst remote",
       "data annotation remote",
       "research assistant remote",
 
+      // Sales
       "sales remote",
+      "sales representative remote",
+
+      // Marketing
       "marketing remote",
       "social media remote",
 
+      // Writing
       "writer remote",
       "content writer remote",
+
+      // Design
       "graphic designer remote",
 
+      // Technology
       "software developer remote",
       "software engineer remote",
       "web developer remote",
@@ -893,31 +981,40 @@ async function getRemoteJobs(search = "") {
       "backend developer remote",
       "full stack developer remote",
 
+      // IT
       "IT support remote",
       "technical support remote",
       "cybersecurity remote",
 
+      // Finance
       "accounting remote",
       "accountant remote",
       "bookkeeper remote",
 
+      // HR
       "HR remote",
       "recruiter remote",
 
+      // Management
       "project manager remote",
       "operations remote",
 
+      // AI
       "AI trainer remote",
       "AI evaluator remote",
       "machine learning remote",
 
+      // Education
       "online teacher remote",
       "online tutor remote",
 
+      // Healthcare
       "healthcare remote",
       "medical writer remote",
 
+      // Translation
       "translator remote"
+
     ];
   }
 
@@ -952,6 +1049,7 @@ async function getRemoteJobs(search = "") {
         allJobs.push(
           ...jobs
         );
+
       }
 
     }
@@ -976,7 +1074,7 @@ async function getRemoteJobs(search = "") {
 
   /*
   ========================================
-  FILTER ORIGINAL JOBS
+  FILTER
   ========================================
   */
 
@@ -987,7 +1085,7 @@ async function getRemoteJobs(search = "") {
 
 
   console.log(
-    `Nigeria-friendly remote jobs: ${filteredJobs.length}`
+    `Nigeria/Africa-friendly remote jobs: ${filteredJobs.length}`
   );
 
 
@@ -1065,6 +1163,7 @@ function isVisaJob(job) {
 
     "foreign workers",
     "overseas applicants"
+
   ];
 
 
@@ -1096,6 +1195,7 @@ async function getVisaJobs(
     "relocation support",
     "international sponsorship",
     "skilled worker visa"
+
   ];
 
 
@@ -1140,6 +1240,7 @@ async function getVisaJobs(
         allJobs.push(
           ...jobs
         );
+
       }
 
     }
@@ -1197,6 +1298,7 @@ app.get("/", (req, res) => {
 
     status:
       "online"
+
   });
 
 });

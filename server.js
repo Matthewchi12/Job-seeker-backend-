@@ -1,7 +1,15 @@
 // ========================================
-// NIGERIA-FRIENDLY REMOTE JOBS BACKEND
-// + VISA SPONSORSHIP JOBS
-// HIMALAYAS API
+// NIGERIA JOBS BACKEND
+//
+// RETURNS ONLY:
+//
+// 1. 🇳🇬 REMOTE JOBS NIGERIANS CAN DO
+//    FROM NIGERIA
+//
+// 2. ✈️ VISA SPONSORSHIP JOBS
+//    NIGERIANS CAN APPLY FOR FROM NIGERIA
+//
+// SOURCE: HIMALAYAS API
 // ========================================
 
 const express = require("express");
@@ -34,12 +42,16 @@ const CACHE_TIME =
 
 
 // ========================================
-// REMOTE JOB CATEGORIES
+// REMOTE JOB SEARCHES
 // ========================================
 //
-// Broad non-tech remote jobs.
+// These are broad job types.
 //
-// Technology is intentionally limited.
+// Tech is intentionally small.
+//
+// All results are passed through the
+// Nigeria eligibility filter before returning.
+//
 // ========================================
 
 const JOB_SEARCHES = [
@@ -86,7 +98,7 @@ const JOB_SEARCHES = [
   "lead generation",
 
   // ========================================
-  // VIRTUAL ASSISTANT
+  // VIRTUAL ASSISTANT / ADMIN
   // ========================================
 
   "virtual assistant",
@@ -151,7 +163,7 @@ const JOB_SEARCHES = [
   "social media designer",
 
   // ========================================
-  // CUSTOMER SUCCESS / ACCOUNT MANAGEMENT
+  // CUSTOMER SUCCESS
   // ========================================
 
   "customer success",
@@ -246,11 +258,10 @@ const JOB_SEARCHES = [
 
   // ========================================
   // TECHNOLOGY
-  // LOW AMOUNT ONLY
+  // SMALL AMOUNT ONLY
   // ========================================
 
   "web developer",
-  "frontend developer",
   "software developer"
 
 ];
@@ -260,16 +271,11 @@ const JOB_SEARCHES = [
 // VISA SPONSORSHIP SEARCHES
 // ========================================
 //
-// These are separate from remote jobs.
+// These searches are NOT restricted to
+// Nigeria.
 //
-// These searches look for jobs mentioning:
-//
-// - Visa sponsorship
-// - Work visa
-// - Visa sponsored
-// - Skilled worker sponsorship
-// - Relocation
-// - Employer sponsorship
+// We search globally because the person
+// may need to relocate to another country.
 //
 // ========================================
 
@@ -279,19 +285,82 @@ const VISA_SEARCHES = [
   "visa sponsored",
   "visa sponsorship available",
   "work visa sponsorship",
-  "work visa",
-  "visa support",
   "employer sponsorship",
   "employer sponsored",
-  "sponsorship available",
-  "skilled worker sponsorship",
+  "work permit sponsorship",
+  "work permit",
   "skilled worker visa",
-  "relocation assistance",
-  "relocation support",
-  "relocation package",
-  "international applicants",
+  "skilled worker sponsorship",
+  "sponsorship available",
   "sponsor visa",
-  "visa sponsorship jobs"
+  "visa support",
+  "immigration sponsorship",
+  "immigration support",
+  "international sponsorship"
+
+];
+
+
+// ========================================
+// VISA KEYWORDS
+// ========================================
+//
+// IMPORTANT:
+//
+// These are stronger sponsorship terms.
+//
+// "relocation" alone is NOT enough.
+//
+// ========================================
+
+const STRONG_VISA_KEYWORDS = [
+
+  "visa sponsorship",
+  "visa sponsored",
+  "visa sponsorship available",
+  "work visa sponsorship",
+  "employer sponsorship",
+  "employer sponsored",
+  "work permit sponsorship",
+  "work permit sponsored",
+  "skilled worker visa",
+  "skilled worker sponsorship",
+  "sponsorship available",
+  "sponsor visa",
+  "visa support",
+  "immigration sponsorship",
+  "immigration support"
+
+];
+
+
+// ========================================
+// REMOTE EXCLUSION KEYWORDS
+// ========================================
+//
+// If a job explicitly says the worker must
+// be located somewhere other than Nigeria,
+// reject it.
+//
+// ========================================
+
+const REMOTE_EXCLUSION_PATTERNS = [
+
+  /\bmust be based in\b/gi,
+  /\bmust reside in\b/gi,
+  /\bmust live in\b/gi,
+  /\bonly open to candidates in\b/gi,
+  /\bonly available to candidates in\b/gi,
+  /\bonly applicants from\b/gi,
+  /\bonly hiring in\b/gi,
+  /\bavailable only in\b/gi,
+  /\bresidents of\b/gi,
+  /\bresident of\b/gi,
+  /\bworking from the united kingdom only\b/gi,
+  /\buk residents only\b/gi,
+  /\bus residents only\b/gi,
+  /\bcanada residents only\b/gi,
+  /\beurope residents only\b/gi
 
 ];
 
@@ -375,10 +444,96 @@ function getLocationRestrictions(job) {
 
 
 // ========================================
-// CHECK NIGERIA ELIGIBILITY
+// GET TIMEZONE RESTRICTIONS
 // ========================================
 
-function checkNigeriaFriendlyJob(job) {
+function getTimezoneRestrictions(job) {
+
+  return Array.isArray(
+    job?.timezoneRestrictions
+  )
+    ? job.timezoneRestrictions
+    : [];
+
+}
+
+
+// ========================================
+// CHECK NIGERIA LOCATION
+// ========================================
+//
+// Nigeria timezone = UTC+1.
+//
+// If a job has timezone restrictions and
+// Nigeria's UTC+1 is NOT included,
+// the job is rejected.
+//
+// If timezone restrictions are empty,
+// we do not reject based on timezone.
+//
+// ========================================
+
+function checkNigeriaTimezone(job) {
+
+  const timezones =
+    getTimezoneRestrictions(job);
+
+
+  // No timezone restriction
+  if (
+    timezones.length === 0
+  ) {
+
+    return {
+
+      accepted: true,
+
+      reason: "no_timezone_restriction"
+
+    };
+
+  }
+
+
+  const nigeriaTimezone =
+    timezones.some(
+      timezone =>
+        Number(timezone) === 1
+    );
+
+
+  if (
+    nigeriaTimezone
+  ) {
+
+    return {
+
+      accepted: true,
+
+      reason: "nigeria_utc_plus_1_allowed"
+
+    };
+
+  }
+
+
+  return {
+
+    accepted: false,
+
+    reason:
+      "nigeria_timezone_not_allowed"
+
+  };
+
+}
+
+
+// ========================================
+// CHECK NIGERIA LOCATION RESTRICTION
+// ========================================
+
+function checkNigeriaLocation(job) {
 
   const restrictions =
     getLocationRestrictions(job);
@@ -403,29 +558,35 @@ function checkNigeriaFriendlyJob(job) {
   }
 
 
-  const countries =
-    restrictions.map(country => {
+  // ========================================
+  // NORMALIZE
+  // ========================================
 
-      return {
+  const locations =
+    restrictions.map(
+      location => {
 
-        alpha2:
-          String(
-            country?.alpha2 || ""
-          ).toLowerCase(),
+        return {
 
-        name:
-          String(
-            country?.name || ""
-          ).toLowerCase(),
+          alpha2:
+            String(
+              location?.alpha2 || ""
+            ).toLowerCase(),
 
-        slug:
-          String(
-            country?.slug || ""
-          ).toLowerCase()
+          name:
+            String(
+              location?.name || ""
+            ).toLowerCase(),
 
-      };
+          slug:
+            String(
+              location?.slug || ""
+            ).toLowerCase()
 
-    });
+        };
+
+      }
+    );
 
 
   // ========================================
@@ -433,22 +594,26 @@ function checkNigeriaFriendlyJob(job) {
   // ========================================
 
   const nigeria =
-    countries.some(country => {
+    locations.some(
+      location => {
 
-      return (
+        return (
 
-        country.alpha2 === "ng" ||
+          location.alpha2 === "ng" ||
 
-        country.name === "nigeria" ||
+          location.name === "nigeria" ||
 
-        country.slug === "nigeria"
+          location.slug === "nigeria"
 
-      );
+        );
 
-    });
+      }
+    );
 
 
-  if (nigeria) {
+  if (
+    nigeria
+  ) {
 
     return {
 
@@ -466,24 +631,28 @@ function checkNigeriaFriendlyJob(job) {
   // ========================================
 
   const africa =
-    countries.some(country => {
+    locations.some(
+      location => {
 
-      return (
+        return (
 
-        country.name.includes(
-          "africa"
-        ) ||
+          location.name.includes(
+            "africa"
+          ) ||
 
-        country.slug.includes(
-          "africa"
-        )
+          location.slug.includes(
+            "africa"
+          )
 
-      );
+        );
 
-    });
+      }
+    );
 
 
-  if (africa) {
+  if (
+    africa
+  ) {
 
     return {
 
@@ -497,7 +666,7 @@ function checkNigeriaFriendlyJob(job) {
 
 
   // ========================================
-  // NOT AVAILABLE IN NIGERIA
+  // OTHERWISE REJECT
   // ========================================
 
   return {
@@ -513,14 +682,293 @@ function checkNigeriaFriendlyJob(job) {
 
 
 // ========================================
+// CHECK EXPLICIT REMOTE RESTRICTIONS
+// ========================================
+
+function checkRemoteDescription(job) {
+
+  const text = (
+
+    `${job.title || ""} ` +
+
+    `${job.description || ""} ` +
+
+    `${job.excerpt || ""}`
+
+  ).toLowerCase();
+
+
+  // ========================================
+  // EXPLICIT NIGERIA ACCEPTANCE
+  // ========================================
+
+  if (
+    text.includes("nigeria") ||
+    text.includes("nigerian")
+  ) {
+
+    // If it mentions Nigeria and does not
+    // contain an explicit contradictory
+    // location restriction, allow it.
+
+  }
+
+
+  // ========================================
+  // COUNTRY-SPECIFIC RESTRICTION
+  // ========================================
+
+  for (
+    const pattern of
+    REMOTE_EXCLUSION_PATTERNS
+  ) {
+
+    const match =
+      text.match(pattern);
+
+
+    if (
+      match
+    ) {
+
+      const index =
+        text.indexOf(
+          match[0]
+        );
+
+
+      const nearby =
+        text.substring(
+          index,
+          index + 150
+        );
+
+
+      // If the nearby text explicitly
+      // mentions Nigeria, don't reject.
+
+      if (
+        nearby.includes("nigeria") ||
+        nearby.includes("nigerian")
+      ) {
+
+        continue;
+
+      }
+
+
+      return {
+
+        accepted: false,
+
+        reason:
+          "explicit_country_restriction"
+
+      };
+
+    }
+
+  }
+
+
+  return {
+
+    accepted: true,
+
+    reason:
+      "no_explicit_country_exclusion"
+
+  };
+
+}
+
+
+// ========================================
+// FINAL NIGERIA REMOTE CHECK
+// ========================================
+//
+// A remote job is accepted ONLY when:
+//
+// 1. Location allows Nigeria/worldwide
+// 2. Timezone allows Nigeria OR no timezone
+//    restriction exists
+// 3. Description does not explicitly
+//    restrict workers to another country
+//
+// ========================================
+
+function checkNigeriaFriendlyJob(job) {
+
+  const locationCheck =
+    checkNigeriaLocation(
+      job
+    );
+
+
+  if (
+    !locationCheck.accepted
+  ) {
+
+    return {
+
+      accepted: false,
+
+      reason:
+        locationCheck.reason
+
+    };
+
+  }
+
+
+  const timezoneCheck =
+    checkNigeriaTimezone(
+      job
+    );
+
+
+  if (
+    !timezoneCheck.accepted
+  ) {
+
+    return {
+
+      accepted: false,
+
+      reason:
+        timezoneCheck.reason
+
+    };
+
+  }
+
+
+  const descriptionCheck =
+    checkRemoteDescription(
+      job
+    );
+
+
+  if (
+    !descriptionCheck.accepted
+  ) {
+
+    return {
+
+      accepted: false,
+
+      reason:
+        descriptionCheck.reason
+
+    };
+
+  }
+
+
+  return {
+
+    accepted: true,
+
+    reason:
+      `${locationCheck.reason}_${timezoneCheck.reason}`
+
+  };
+
+}
+
+
+// ========================================
+// CHECK VISA SPONSORSHIP
+// ========================================
+//
+// IMPORTANT:
+//
+// A job is NOT considered sponsored just
+// because it says "relocation".
+//
+// It must contain genuine sponsorship,
+// work visa, work permit, employer
+// sponsorship, skilled worker visa, etc.
+//
+// ========================================
+
+function checkVisaSponsorship(job) {
+
+  const text = (
+
+    `${job.title || ""} ` +
+
+    `${job.description || ""} ` +
+
+    `${job.excerpt || ""} ` +
+
+    `${Array.isArray(job.categories)
+      ? job.categories.join(" ")
+      : ""} ` +
+
+    `${Array.isArray(job.parentCategories)
+      ? job.parentCategories.join(" ")
+      : ""}`
+
+  ).toLowerCase();
+
+
+  // ========================================
+  // STRONG SPONSORSHIP MATCH
+  // ========================================
+
+  const matchedKeywords =
+    STRONG_VISA_KEYWORDS.filter(
+      keyword =>
+        text.includes(
+          keyword
+        )
+    );
+
+
+  if (
+    matchedKeywords.length === 0
+  ) {
+
+    return {
+
+      accepted: false,
+
+      reason:
+        "no_clear_visa_sponsorship",
+
+      matchedKeywords: []
+
+    };
+
+  }
+
+
+  return {
+
+    accepted: true,
+
+    reason:
+      "visa_sponsorship_found",
+
+    matchedKeywords
+
+  };
+
+}
+
+
+// ========================================
 // SEARCH HIMALAYAS
 // ========================================
 //
-// For remote jobs:
-// country=NG
+// nigeriaOnly = true
 //
-// For visa jobs:
-// no country restriction
+//    country=NG
+//
+// nigeriaOnly = false
+//
+//    global search for sponsorship
 //
 // ========================================
 
@@ -539,10 +987,12 @@ async function searchHimalayas(
 
 
     // ========================================
-    // NIGERIA FILTER
+    // NIGERIA SEARCH
     // ========================================
 
-    if (nigeriaOnly) {
+    if (
+      nigeriaOnly
+    ) {
 
       url.searchParams.set(
         "country",
@@ -553,7 +1003,7 @@ async function searchHimalayas(
 
 
     // ========================================
-    // SEARCH TERM
+    // SEARCH
     // ========================================
 
     if (
@@ -570,7 +1020,7 @@ async function searchHimalayas(
 
 
     // ========================================
-    // SORT BY RECENT
+    // SORT
     // ========================================
 
     url.searchParams.set(
@@ -593,8 +1043,8 @@ async function searchHimalayas(
       "Himalayas search:",
       search || "all",
       nigeriaOnly
-        ? "(Nigeria)"
-        : "(Visa)"
+        ? "(REMOTE/NIGERIA)"
+        : "(VISA/GLOBAL)"
     );
 
 
@@ -604,7 +1054,9 @@ async function searchHimalayas(
       );
 
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
 
       console.error(
         "Himalayas error:",
@@ -634,8 +1086,9 @@ async function searchHimalayas(
 
     return data.jobs;
 
-
-  } catch (error) {
+  } catch (
+    error
+  ) {
 
     console.error(
       "Himalayas request failed:",
@@ -682,7 +1135,10 @@ function removeDuplicates(
       }
 
 
-      seen.add(key);
+      seen.add(
+        key
+      );
+
 
       return true;
 
@@ -769,7 +1225,7 @@ function formatSalary(
 
 
 // ========================================
-// FORMAT HIMALAYAS JOB
+// FORMAT JOB
 // ========================================
 
 function formatHimalayasJob(
@@ -798,21 +1254,23 @@ function formatHimalayasJob(
     location =
       restrictions
 
-        .map(country => {
+        .map(
+          country => {
 
-          return (
+            return (
 
-            country?.name ||
+              country?.name ||
 
-            country?.alpha2 ||
+              country?.alpha2 ||
 
-            country?.slug ||
+              country?.slug ||
 
-            ""
+              ""
 
-          );
+            );
 
-        })
+          }
+        )
 
         .filter(Boolean)
 
@@ -834,7 +1292,7 @@ function formatHimalayasJob(
 
 
   // ========================================
-  // CATEGORY
+  // CATEGORIES
   // ========================================
 
   const categories =
@@ -875,7 +1333,7 @@ function formatHimalayasJob(
 
 
   // ========================================
-  // VISA FLAG
+  // VISA
   // ========================================
 
   const visaSponsorship =
@@ -883,7 +1341,7 @@ function formatHimalayasJob(
 
 
   // ========================================
-  // RETURN JOB
+  // RETURN
   // ========================================
 
   return {
@@ -917,13 +1375,9 @@ function formatHimalayasJob(
 
     timezoneRestrictions:
 
-      Array.isArray(
-        job.timezoneRestrictions
-      )
-
-        ? job.timezoneRestrictions
-
-        : [],
+      getTimezoneRestrictions(
+        job
+      ),
 
     description,
 
@@ -1016,14 +1470,10 @@ function formatHimalayasJob(
     seniority,
 
     remote:
-      visaSponsorship
-        ? false
-        : true,
+      !visaSponsorship,
 
     nigeriaFriendly:
-      visaSponsorship
-        ? false
-        : true,
+      !visaSponsorship,
 
     visaSponsorship,
 
@@ -1039,7 +1489,7 @@ function formatHimalayasJob(
 
 
 // ========================================
-// GET DIVERSE REMOTE JOBS
+// GET REMOTE JOBS
 // ========================================
 
 async function getRemoteJobs(
@@ -1048,7 +1498,7 @@ async function getRemoteJobs(
 ) {
 
   const cacheKey =
-    `diverse-${search.toLowerCase()}-${page}`;
+    `remote-${search.toLowerCase()}-${page}`;
 
 
   const cached =
@@ -1095,28 +1545,28 @@ async function getRemoteJobs(
 
 
   // ========================================
-  // NO SEARCH
+  // DEFAULT SEARCH
   // ========================================
 
   else {
 
-    const CATEGORIES_PER_PAGE = 6;
+    const SEARCHES_PER_PAGE = 6;
 
 
     const startIndex =
       (
         (page - 1) *
-        CATEGORIES_PER_PAGE
+        SEARCHES_PER_PAGE
       ) %
       JOB_SEARCHES.length;
 
 
-    const selectedCategories = [];
+    const selectedSearches = [];
 
 
     for (
       let i = 0;
-      i < CATEGORIES_PER_PAGE;
+      i < SEARCHES_PER_PAGE;
       i++
     ) {
 
@@ -1127,7 +1577,7 @@ async function getRemoteJobs(
         JOB_SEARCHES.length;
 
 
-      selectedCategories.push(
+      selectedSearches.push(
         JOB_SEARCHES[index]
       );
 
@@ -1135,19 +1585,15 @@ async function getRemoteJobs(
 
 
     console.log(
-      "Remote categories used:",
-      selectedCategories
+      "Remote searches:",
+      selectedSearches
     );
 
-
-    // ========================================
-    // FETCH ONLY 6 SEARCHES
-    // ========================================
 
     const results =
       await Promise.all(
 
-        selectedCategories.map(
+        selectedSearches.map(
           searchTerm =>
 
             searchHimalayas(
@@ -1183,12 +1629,12 @@ async function getRemoteJobs(
 
 
   console.log(
-    `Raw remote jobs collected: ${rawJobs.length}`
+    `Raw remote jobs: ${rawJobs.length}`
   );
 
 
   // ========================================
-  // REMOVE DUPLICATES
+  // DUPLICATES
   // ========================================
 
   rawJobs =
@@ -1198,7 +1644,7 @@ async function getRemoteJobs(
 
 
   console.log(
-    `After duplicates removed: ${rawJobs.length}`
+    `Remote after duplicates: ${rawJobs.length}`
   );
 
 
@@ -1206,24 +1652,35 @@ async function getRemoteJobs(
   // NIGERIA FILTER
   // ========================================
 
-  const nigeriaFriendlyJobs =
-    rawJobs.filter(
-      job => {
-
-        const result =
-          checkNigeriaFriendlyJob(
-            job
-          );
+  const acceptedJobs =
+    [];
 
 
-        return result.accepted;
+  rawJobs.forEach(
+    job => {
+
+      const check =
+        checkNigeriaFriendlyJob(
+          job
+        );
+
+
+      if (
+        check.accepted
+      ) {
+
+        acceptedJobs.push(
+          job
+        );
 
       }
-    );
+
+    }
+  );
 
 
   console.log(
-    `Nigeria-friendly jobs: ${nigeriaFriendlyJobs.length}`
+    `Remote jobs allowed in Nigeria: ${acceptedJobs.length}`
   );
 
 
@@ -1232,7 +1689,7 @@ async function getRemoteJobs(
   // ========================================
 
   const jobs =
-    nigeriaFriendlyJobs.map(
+    acceptedJobs.map(
       job =>
         formatHimalayasJob(
           job,
@@ -1258,7 +1715,6 @@ async function getRemoteJobs(
       jobs
 
     }
-
   );
 
 
@@ -1268,25 +1724,7 @@ async function getRemoteJobs(
 
 
 // ========================================
-// GET VISA SPONSORSHIP JOBS
-// ========================================
-//
-// IMPORTANT:
-//
-// These jobs are NOT restricted to Nigeria.
-//
-// They may be located in:
-//
-// UK
-// Canada
-// USA
-// Australia
-// Europe
-// Other countries
-//
-// The purpose is to find employers/jobs
-// mentioning sponsorship or relocation.
-//
+// GET VISA JOBS
 // ========================================
 
 async function getVisaJobs(
@@ -1323,7 +1761,7 @@ async function getVisaJobs(
 
 
   // ========================================
-  // USER VISA SEARCH
+  // USER SEARCH
   // ========================================
 
   if (
@@ -1342,7 +1780,7 @@ async function getVisaJobs(
 
 
   // ========================================
-  // DEFAULT VISA SEARCH
+  // DEFAULT SEARCH
   // ========================================
 
   else {
@@ -1382,14 +1820,10 @@ async function getVisaJobs(
 
 
     console.log(
-      "Visa searches used:",
+      "Visa searches:",
       selectedSearches
     );
 
-
-    // ========================================
-    // FETCH ONLY 6 SEARCHES
-    // ========================================
 
     const results =
       await Promise.all(
@@ -1431,12 +1865,12 @@ async function getVisaJobs(
 
 
   console.log(
-    `Raw visa jobs collected: ${rawJobs.length}`
+    `Raw visa jobs: ${rawJobs.length}`
   );
 
 
   // ========================================
-  // REMOVE DUPLICATES
+  // DUPLICATES
   // ========================================
 
   rawJobs =
@@ -1445,78 +1879,39 @@ async function getVisaJobs(
     );
 
 
-  console.log(
-    `Visa jobs after duplicates removed: ${rawJobs.length}`
-  );
-
-
   // ========================================
-  // VISA FILTER
-  // ========================================
-  //
-  // We only keep jobs where the title,
-  // description, excerpt or category
-  // actually mentions sponsorship,
-  // visa, relocation, or related terms.
-  //
+  // VISA SPONSORSHIP FILTER
   // ========================================
 
-  const visaJobs =
-    rawJobs.filter(
-      job => {
-
-        const text = (
-
-          `${job.title || ""} ` +
-
-          `${job.description || ""} ` +
-
-          `${job.excerpt || ""} ` +
-
-          `${Array.isArray(job.categories)
-            ? job.categories.join(" ")
-            : ""} ` +
-
-          `${Array.isArray(job.parentCategories)
-            ? job.parentCategories.join(" ")
-            : ""}`
-
-        ).toLowerCase();
+  const acceptedVisaJobs =
+    [];
 
 
-        const visaKeywords = [
+  rawJobs.forEach(
+    job => {
 
-          "visa sponsorship",
-          "visa sponsored",
-          "sponsorship available",
-          "sponsor visa",
-          "work visa",
-          "visa support",
-          "employer sponsorship",
-          "employer sponsored",
-          "skilled worker visa",
-          "skilled worker sponsorship",
-          "relocation assistance",
-          "relocation support",
-          "relocation package",
-          "visa sponsorship available"
-
-        ];
+      const check =
+        checkVisaSponsorship(
+          job
+        );
 
 
-        return visaKeywords.some(
-          keyword =>
-            text.includes(
-              keyword
-            )
+      if (
+        check.accepted
+      ) {
+
+        acceptedVisaJobs.push(
+          job
         );
 
       }
-    );
+
+    }
+  );
 
 
   console.log(
-    `Confirmed visa/sponsorship jobs: ${visaJobs.length}`
+    `Confirmed visa sponsorship jobs: ${acceptedVisaJobs.length}`
   );
 
 
@@ -1525,7 +1920,7 @@ async function getVisaJobs(
   // ========================================
 
   const jobs =
-    visaJobs.map(
+    acceptedVisaJobs.map(
       job =>
         formatHimalayasJob(
           job,
@@ -1551,7 +1946,6 @@ async function getVisaJobs(
       jobs
 
     }
-
   );
 
 
@@ -1574,7 +1968,7 @@ app.get(
         true,
 
       message:
-        "Nigeria Remote Jobs API is running",
+        "Nigeria Jobs API is running",
 
       status:
         "online",
@@ -1590,11 +1984,11 @@ app.get(
         remote:
           "/api/jobs/remote",
 
-        jobs:
-          "/api/jobs",
-
         visa:
           "/api/jobs/visa",
+
+        jobs:
+          "/api/jobs",
 
         debug:
           "/api/jobs/remote/debug"
@@ -1608,7 +2002,7 @@ app.get(
 
 
 // ========================================
-// REMOTE JOBS
+// REMOTE JOBS ENDPOINT
 // ========================================
 
 app.get(
@@ -1658,12 +2052,16 @@ app.get(
         type:
           "remote",
 
+        country:
+          "Nigeria",
+
         jobs
 
       });
 
-
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "Remote jobs error:",
@@ -1691,7 +2089,7 @@ app.get(
 
 
 // ========================================
-// VISA SPONSORSHIP JOBS
+// VISA SPONSORSHIP ENDPOINT
 // ========================================
 
 app.get(
@@ -1741,12 +2139,16 @@ app.get(
         type:
           "visa-sponsorship",
 
+        applicants:
+          "Nigeria",
+
         jobs
 
       });
 
-
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "Visa jobs error:",
@@ -1774,7 +2176,7 @@ app.get(
 
 
 // ========================================
-// DEBUG
+// REMOTE DEBUG
 // ========================================
 
 app.get(
@@ -1824,6 +2226,9 @@ app.get(
               locationRestrictions:
                 job.locationRestrictions,
 
+              timezoneRestrictions:
+                job.timezoneRestrictions,
+
               accepted:
                 check.accepted,
 
@@ -1857,7 +2262,9 @@ app.get(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "Debug error:",
@@ -1886,6 +2293,10 @@ app.get(
 
 // ========================================
 // GENERAL JOBS ENDPOINT
+// ========================================
+//
+// This remains the remote jobs feed.
+//
 // ========================================
 
 app.get(
@@ -1935,12 +2346,16 @@ app.get(
         type:
           "remote",
 
+        country:
+          "Nigeria",
+
         jobs
 
       });
 
-
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "Jobs endpoint error:",

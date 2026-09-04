@@ -1,10 +1,11 @@
 // ========================================
-// NIGERIA JOBS BACKEND
+// INTERNATIONAL REMOTE JOBS BACKEND
 //
-// RETURNS ONLY:
+// PURPOSE:
 //
-// 1. REMOTE JOBS EXPLICITLY AVAILABLE
-//    TO PEOPLE IN NIGERIA
+// 1. INTERNATIONAL REMOTE JOBS
+//    THAT A PERSON IN NIGERIA CAN DO
+//    FROM NIGERIA
 //
 // 2. VISA SPONSORSHIP JOBS
 //
@@ -296,35 +297,15 @@ const VISA_NEGATIVE_KEYWORDS = [
 
 
 // ========================================
-// REMOTE POSITIVE TERMS
+// REMOTE NEGATIVE TERMS
 // ========================================
 //
-// The job must actually say remote/work from home.
-// ========================================
-
-const REMOTE_POSITIVE_TERMS = [
-
-  "remote",
-  "fully remote",
-  "100% remote",
-  "work remotely",
-  "working remotely",
-  "remote position",
-  "remote role",
-  "remote job",
-  "work from home",
-  "work-from-home",
-  "home based",
-  "home-based",
-  "distributed team",
-  "remote-first",
-  "remote first"
-
-];
-
-
-// ========================================
-// REMOTE NEGATIVE TERMS
+// We DO NOT require the word "remote".
+//
+// Himalayas itself is a remote-jobs API.
+//
+// We only reject jobs that clearly say
+// they are not remote.
 // ========================================
 
 const REMOTE_NEGATIVE_TERMS = [
@@ -348,6 +329,21 @@ const REMOTE_NEGATIVE_TERMS = [
 // ========================================
 // COUNTRY RESTRICTION PATTERNS
 // ========================================
+//
+// These are used to detect situations where
+// the description clearly restricts applicants
+// to another country.
+//
+// Example:
+//
+// "Must be based in the United States"
+//
+// = REJECT
+//
+// "Must be based in Nigeria"
+//
+// = ACCEPT
+// ========================================
 
 const COUNTRY_RESTRICTION_PATTERNS = [
 
@@ -366,7 +362,46 @@ const COUNTRY_RESTRICTION_PATTERNS = [
   /\bapplicants must be located in\b/gi,
   /\bus residents only\b/gi,
   /\buk residents only\b/gi,
-  /\bcanada residents only\b/gi
+  /\bcanada residents only\b/gi,
+  /\baustralia residents only\b/gi,
+  /\beurope residents only\b/gi
+
+];
+
+
+// ========================================
+// EXPLICIT FOREIGN-ONLY PHRASES
+// ========================================
+
+const FOREIGN_ONLY_TERMS = [
+
+  "us only",
+  "usa only",
+  "united states only",
+  "u.s. only",
+  "uk only",
+  "united kingdom only",
+  "canada only",
+  "australia only",
+  "europe only",
+
+  "must be located in the united states",
+  "must be located in the us",
+  "must be located in the usa",
+
+  "must be based in the united states",
+  "must be based in the us",
+  "must be based in the usa",
+
+  "must reside in the united states",
+  "must reside in the us",
+  "must reside in the usa",
+
+  "us residents only",
+  "usa residents only",
+  "uk residents only",
+  "canada residents only",
+  "australia residents only"
 
 ];
 
@@ -435,7 +470,7 @@ function cleanHtml(html = "") {
 
 
 // ========================================
-// GET TEXT
+// GET JOB TEXT
 // ========================================
 
 function getJobText(job) {
@@ -494,19 +529,26 @@ function getTimezoneRestrictions(job) {
 
 
 // ========================================
-// EXPLICIT NIGERIA CHECK
+// CHECK LOCATION
 // ========================================
 //
 // IMPORTANT:
 //
-// Worldwide jobs are now REJECTED.
+// We are NOT saying:
 //
-// Empty locationRestrictions means
-// worldwide on Himalayas.
+// "Nigeria must appear"
 //
-// We DO NOT accept worldwide.
+// Instead:
 //
-// Nigeria must be explicitly listed.
+// - Worldwide = ACCEPT
+// - Nigeria = ACCEPT
+// - Africa = ACCEPT if no conflicting restriction
+// - Other countries = reject ONLY when the
+//   listing explicitly requires that location
+//
+// This is because a worldwide remote job has
+// no location restriction and can be worked
+// from Nigeria.
 // ========================================
 
 function checkNigeriaLocation(job) {
@@ -516,7 +558,7 @@ function checkNigeriaLocation(job) {
 
 
   // ========================================
-  // REJECT WORLDWIDE
+  // WORLDWIDE
   // ========================================
 
   if (
@@ -525,10 +567,10 @@ function checkNigeriaLocation(job) {
 
     return {
 
-      accepted: false,
+      accepted: true,
 
       reason:
-        "worldwide_not_accepted"
+        "worldwide_no_location_restriction"
 
     };
 
@@ -542,19 +584,22 @@ function checkNigeriaLocation(job) {
         alpha2:
           String(
             location?.alpha2 || ""
-          ).toLowerCase()
+          )
+          .toLowerCase()
           .trim(),
 
         name:
           String(
             location?.name || ""
-          ).toLowerCase()
+          )
+          .toLowerCase()
           .trim(),
 
         slug:
           String(
             location?.slug || ""
-          ).toLowerCase()
+          )
+          .toLowerCase()
           .trim()
 
       })
@@ -587,7 +632,7 @@ function checkNigeriaLocation(job) {
       accepted: true,
 
       reason:
-        "explicit_nigeria"
+        "nigeria_explicitly_allowed"
 
     };
 
@@ -595,12 +640,47 @@ function checkNigeriaLocation(job) {
 
 
   // ========================================
-  // AFRICA IS NOT ENOUGH
+  // AFRICA
   // ========================================
+
+  const africa =
+    locations.some(
+      location =>
+
+        location.name === "africa" ||
+
+        location.slug === "africa"
+
+    );
+
+
+  if (
+    africa
+  ) {
+
+    return {
+
+      accepted: true,
+
+      reason:
+        "africa_region_allowed"
+
+    };
+
+  }
+
+
+  // ========================================
+  // OTHER COUNTRIES
   //
-  // We intentionally DO NOT accept
-  // "Africa" because your requirement is
-  // specifically Nigeria.
+  // Example:
+  //
+  // United States
+  // United Kingdom
+  //
+  // These are assumed restricted because
+  // Himalayas says locationRestrictions are
+  // countries where candidates must be based.
   // ========================================
 
   return {
@@ -608,7 +688,7 @@ function checkNigeriaLocation(job) {
     accepted: false,
 
     reason:
-      "nigeria_not_explicitly_allowed"
+      "restricted_to_other_location"
 
   };
 
@@ -616,23 +696,42 @@ function checkNigeriaLocation(job) {
 
 
 // ========================================
-// CHECK NIGERIA TIMEZONE
+// CHECK TIMEZONE
 // ========================================
 //
 // Nigeria = UTC+1.
 //
-// Empty timezoneRestrictions means all
-// timezones, so that is okay.
+// Empty timezone restrictions means the
+// company does not restrict timezone.
 //
-// If restrictions exist, Nigeria UTC+1
-// must be allowed.
+// If timezone restrictions exist, we only
+// reject when Nigeria clearly cannot overlap.
 // ========================================
+
+function normalizeTimezone(value) {
+
+  return String(
+    value || ""
+  )
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "")
+    .replace("utc", "")
+    .replace("gmt", "")
+    .replace(":00", "");
+
+}
+
 
 function checkNigeriaTimezone(job) {
 
   const timezones =
     getTimezoneRestrictions(job);
 
+
+  // ========================================
+  // NO TIMEZONE RESTRICTION
+  // ========================================
 
   if (
     timezones.length === 0
@@ -655,18 +754,28 @@ function checkNigeriaTimezone(job) {
       timezone => {
 
         const value =
-          String(
+          normalizeTimezone(
             timezone
-          )
-          .toLowerCase()
-          .trim()
-          .replace("utc", "")
-          .replace("+", "");
+          );
 
         return (
+
           value === "1" ||
+
+          value === "+1" ||
+
           value === "01" ||
-          value === "1:00"
+
+          value === "+01" ||
+
+          value === "1:00" ||
+
+          value === "+1:00" ||
+
+          value === "01:00" ||
+
+          value === "+01:00"
+
         );
 
       }
@@ -689,12 +798,19 @@ function checkNigeriaTimezone(job) {
   }
 
 
+  // ========================================
+  // TIMEZONE RESTRICTION EXISTS BUT WE
+  // CANNOT CONFIRM IT EXCLUDES NIGERIA.
+  //
+  // Do not aggressively delete the job.
+  // ========================================
+
   return {
 
-    accepted: false,
+    accepted: true,
 
     reason:
-      "nigeria_timezone_not_allowed"
+      "timezone_restriction_not_confirmed_conflict"
 
   };
 
@@ -702,11 +818,19 @@ function checkNigeriaTimezone(job) {
 
 
 // ========================================
-// CHECK EXPLICIT REMOTE
+// CHECK REMOTE
 // ========================================
 //
-// A job must contain clear remote/work-from-home
-// language.
+// Himalayas is a remote jobs API.
+//
+// Therefore we DO NOT require:
+//
+// "remote"
+// "work from home"
+//
+// in the description.
+//
+// We only reject obvious on-site-only jobs.
 // ========================================
 
 function checkExplicitRemote(job) {
@@ -715,37 +839,10 @@ function checkExplicitRemote(job) {
     getJobText(job);
 
 
-  const hasRemote =
-    REMOTE_POSITIVE_TERMS.some(
-      term =>
-        text.includes(
-          term
-        )
-    );
-
-
-  if (
-    !hasRemote
-  ) {
-
-    return {
-
-      accepted: false,
-
-      reason:
-        "remote_not_explicit"
-
-    };
-
-  }
-
-
   const hasNegative =
     REMOTE_NEGATIVE_TERMS.some(
       term =>
-        text.includes(
-          term
-        )
+        text.includes(term)
     );
 
 
@@ -758,7 +855,7 @@ function checkExplicitRemote(job) {
       accepted: false,
 
       reason:
-        "onsite_restriction"
+        "onsite_only"
 
     };
 
@@ -770,7 +867,7 @@ function checkExplicitRemote(job) {
     accepted: true,
 
     reason:
-      "explicit_remote"
+      "himalayas_remote_listing"
 
   };
 
@@ -786,6 +883,37 @@ function checkRemoteDescription(job) {
   const text =
     getJobText(job);
 
+
+  // ========================================
+  // FOREIGN ONLY TERMS
+  // ========================================
+
+  const foreignOnly =
+    FOREIGN_ONLY_TERMS.some(
+      term =>
+        text.includes(term)
+    );
+
+
+  if (
+    foreignOnly
+  ) {
+
+    return {
+
+      accepted: false,
+
+      reason:
+        "foreign_country_only"
+
+    };
+
+  }
+
+
+  // ========================================
+  // COUNTRY RESTRICTION PATTERNS
+  // ========================================
 
   for (
     const pattern of
@@ -820,21 +948,17 @@ function checkRemoteDescription(job) {
       const nearby =
         text.substring(
           index,
-          index + 250
+          index + 300
         );
 
 
       // ========================================
-      // Nigeria explicitly allowed
+      // NIGERIA ALLOWED
       // ========================================
 
       if (
-        nearby.includes(
-          "nigeria"
-        ) ||
-        nearby.includes(
-          "nigerian"
-        )
+        nearby.includes("nigeria") ||
+        nearby.includes("nigerian")
       ) {
 
         continue;
@@ -843,7 +967,7 @@ function checkRemoteDescription(job) {
 
 
       // ========================================
-      // Otherwise reject
+      // OTHER LOCATION
       // ========================================
 
       return {
@@ -851,7 +975,7 @@ function checkRemoteDescription(job) {
         accepted: false,
 
         reason:
-          "description_country_restriction"
+          "description_location_restriction"
 
       };
 
@@ -865,7 +989,7 @@ function checkRemoteDescription(job) {
     accepted: true,
 
     reason:
-      "no_conflicting_country_restriction"
+      "no_conflicting_location_description"
 
   };
 
@@ -905,13 +1029,6 @@ function extractEmails(job) {
 // ========================================
 // EXTRACT EXTERNAL URLS
 // ========================================
-//
-// We don't want to use a Himalayas URL as
-// the actual company application route.
-//
-// We prefer an external company/recruitment
-// application URL if one is present.
-// ========================================
 
 function extractExternalUrls(job) {
 
@@ -928,6 +1045,7 @@ function extractExternalUrls(job) {
   return [
     ...new Set(
       urls
+
         .map(
           url =>
             url.replace(
@@ -935,6 +1053,7 @@ function extractExternalUrls(job) {
               ""
             )
         )
+
         .filter(
           url => {
 
@@ -947,16 +1066,21 @@ function extractExternalUrls(job) {
                 .hostname
                 .toLowerCase();
 
+
               return (
+
                 !host.includes(
                   "himalayas.app"
                 ) &&
+
                 !host.includes(
                   "linkedin.com"
                 ) &&
+
                 !host.includes(
                   "indeed.com"
                 ) &&
+
                 !host.includes(
                   "weworkremotely.com"
                 )
@@ -978,32 +1102,31 @@ function extractExternalUrls(job) {
 
 
 // ========================================
-// CHECK APPLICATION METHOD
+// CHECK APPLICATION
 // ========================================
 //
-// ACCEPT:
+// IMPORTANT:
 //
-// 1. Direct email
-// 2. External company/application website
+// Application is NO LONGER a filter.
 //
-// REJECT:
+// We simply collect:
 //
-// Himalayas-only application link with
-// no email and no external application URL.
+// 1. Email
+// 2. External company URL
+// 3. Himalayas application URL
+//
+// A job will NOT disappear just because
+// an email is unavailable.
 // ========================================
 
-function checkApplicationMethod(job) {
+function getApplicationMethod(job) {
 
   const emails =
-    extractEmails(
-      job
-    );
+    extractEmails(job);
 
 
   const externalUrls =
-    extractExternalUrls(
-      job
-    );
+    extractExternalUrls(job);
 
 
   const originalUrl =
@@ -1013,137 +1136,78 @@ function checkApplicationMethod(job) {
     ).trim();
 
 
-  let applicationUrl =
-    "";
-
-
-  // ========================================
-  // FIRST: EXTERNAL URL FROM DESCRIPTION
-  // ========================================
-
-  if (
-    externalUrls.length > 0
-  ) {
-
-    applicationUrl =
-      externalUrls[0];
-
-  }
-
-
-  // ========================================
-  // SECOND: HIMALAYAS APPLICATION LINK
-  //
-  // Only use it if it is not a Himalayas
-  // URL.
-  // ========================================
-
-  if (
-    !applicationUrl &&
-    originalUrl
-  ) {
-
-    try {
-
-      const host =
-        new URL(
-          originalUrl
-        )
-        .hostname
-        .toLowerCase();
-
-
-      if (
-        !host.includes(
-          "himalayas.app"
-        )
-      ) {
-
-        applicationUrl =
-          originalUrl;
-
-      }
-
-    } catch {
-
-      applicationUrl =
-        "";
-
-    }
-
-  }
-
-
-  // ========================================
-  // EMAIL AVAILABLE
-  // ========================================
-
   if (
     emails.length > 0
   ) {
 
     return {
 
-      accepted: true,
-
       method:
-        "email",
+        "Email",
 
       email:
         emails[0],
 
-      applicationUrl:
-        applicationUrl || ""
+      url:
+        externalUrls[0] ||
+        originalUrl ||
+        ""
 
     };
 
   }
 
 
-  // ========================================
-  // EXTERNAL WEBSITE AVAILABLE
-  // ========================================
-
   if (
-    applicationUrl
+    externalUrls.length > 0
   ) {
 
     return {
 
-      accepted: true,
-
       method:
-        "company_website",
+        "Company Website",
 
       email:
         "",
 
-      applicationUrl
+      url:
+        externalUrls[0]
 
     };
 
   }
 
 
-  // ========================================
-  // NO USABLE APPLICATION METHOD
-  // ========================================
+  if (
+    originalUrl
+  ) {
+
+    return {
+
+      method:
+        "Application Link",
+
+      email:
+        "",
+
+      url:
+        originalUrl
+
+    };
+
+  }
+
 
   return {
 
-    accepted: false,
-
     method:
-      "none",
+      "No application link found",
 
     email:
       "",
 
-    applicationUrl:
-      "",
-
-    reason:
-      "no_direct_email_or_external_application"
+    url:
+      ""
 
   };
 
@@ -1157,7 +1221,7 @@ function checkApplicationMethod(job) {
 function checkNigeriaFriendlyJob(job) {
 
   // ========================================
-  // 1. EXPLICIT NIGERIA
+  // 1. LOCATION
   // ========================================
 
   const location =
@@ -1209,7 +1273,7 @@ function checkNigeriaFriendlyJob(job) {
 
 
   // ========================================
-  // 3. EXPLICIT REMOTE
+  // 3. REMOTE
   // ========================================
 
   const remote =
@@ -1235,7 +1299,7 @@ function checkNigeriaFriendlyJob(job) {
 
 
   // ========================================
-  // 4. DESCRIPTION RESTRICTIONS
+  // 4. DESCRIPTION
   // ========================================
 
   const description =
@@ -1261,33 +1325,19 @@ function checkNigeriaFriendlyJob(job) {
 
 
   // ========================================
-  // 5. APPLICATION METHOD
+  // APPLICATION
+  //
+  // NOT A FILTER.
   // ========================================
 
   const application =
-    checkApplicationMethod(
+    getApplicationMethod(
       job
     );
 
 
-  if (
-    !application.accepted
-  ) {
-
-    return {
-
-      accepted: false,
-
-      reason:
-        application.reason
-
-    };
-
-  }
-
-
   // ========================================
-  // ACCEPTED
+  // ACCEPT
   // ========================================
 
   return {
@@ -1295,7 +1345,7 @@ function checkNigeriaFriendlyJob(job) {
     accepted: true,
 
     reason:
-      "nigeria_remote_job",
+      "international_remote_job_nigeria_eligible",
 
     application
 
@@ -1315,7 +1365,7 @@ function checkVisaSponsorship(job) {
 
 
   // ========================================
-  // REJECT NEGATIVE
+  // NEGATIVE
   // ========================================
 
   const hasNegative =
@@ -1346,7 +1396,7 @@ function checkVisaSponsorship(job) {
 
 
   // ========================================
-  // FIND STRONG TERMS
+  // STRONG TERMS
   // ========================================
 
   const matchedKeywords =
@@ -1376,32 +1426,10 @@ function checkVisaSponsorship(job) {
   }
 
 
-  // ========================================
-  // VISA APPLICATION METHOD
-  // ========================================
-
   const application =
-    checkApplicationMethod(
+    getApplicationMethod(
       job
     );
-
-
-  if (
-    !application.accepted
-  ) {
-
-    return {
-
-      accepted: false,
-
-      reason:
-        application.reason,
-
-      matchedKeywords
-
-    };
-
-  }
 
 
   return {
@@ -1439,25 +1467,26 @@ async function searchHimalayas(
 
 
     // ========================================
-    // REMOTE
+    // IMPORTANT
+    //
+    // We use country=NG to help retrieve jobs
+    // relevant to Nigeria.
+    //
+    // BUT we DO NOT use:
+    //
+    // exclude_worldwide=true
+    //
+    // because worldwide jobs are exactly the
+    // international jobs we want.
     // ========================================
 
     if (
       nigeriaOnly
     ) {
 
-      // Explicitly ask Himalayas for
-      // Nigeria jobs.
       url.searchParams.set(
         "country",
         "NG"
-      );
-
-      // IMPORTANT:
-      // Do NOT ask for worldwide jobs.
-      url.searchParams.set(
-        "exclude_worldwide",
-        "true"
       );
 
     }
@@ -1480,11 +1509,19 @@ async function searchHimalayas(
     }
 
 
+    // ========================================
+    // SORT
+    // ========================================
+
     url.searchParams.set(
       "sort",
       "recent"
     );
 
+
+    // ========================================
+    // PAGE
+    // ========================================
 
     url.searchParams.set(
       "page",
@@ -1496,7 +1533,7 @@ async function searchHimalayas(
       "Himalayas:",
       search || "all",
       nigeriaOnly
-        ? "EXPLICIT NIGERIA REMOTE"
+        ? "INTERNATIONAL REMOTE / NIGERIA ELIGIBLE"
         : "VISA GLOBAL"
     );
 
@@ -1534,6 +1571,11 @@ async function searchHimalayas(
       return [];
 
     }
+
+
+    console.log(
+      `Himalayas returned ${data.jobs.length} jobs`
+    );
 
 
     return data.jobs;
@@ -1898,15 +1940,19 @@ function formatHimalayasJob(
     );
 
 
+  // ========================================
+  // LOCATION DISPLAY
+  // ========================================
+
   let location =
-    "Nigeria";
+    "Remote — Nigeria eligible";
 
 
   if (
     restrictions.length > 0
   ) {
 
-    location =
+    const names =
       restrictions
         .map(
           item =>
@@ -1915,8 +1961,17 @@ function formatHimalayasJob(
             item?.slug ||
             ""
         )
-        .filter(Boolean)
-        .join(", ");
+        .filter(Boolean);
+
+
+    if (
+      names.length > 0
+    ) {
+
+      location =
+        `Remote — ${names.join(", ")}`;
+
+    }
 
   }
 
@@ -1967,44 +2022,9 @@ function formatHimalayasJob(
 
 
   const application =
-    checkApplicationMethod(
+    getApplicationMethod(
       job
     );
-
-
-  let url =
-    application.applicationUrl ||
-    "";
-
-
-  const applyEmail =
-    application.email ||
-    "";
-
-
-  // ========================================
-  // APPLICATION DISPLAY
-  // ========================================
-
-  let applyMethod =
-    "None";
-
-
-  if (
-    applyEmail
-  ) {
-
-    applyMethod =
-      "Email";
-
-  } else if (
-    url
-  ) {
-
-    applyMethod =
-      "Company Website";
-
-  }
 
 
   return {
@@ -2030,6 +2050,10 @@ function formatHimalayasJob(
       job.companyLogo ||
       "",
 
+    // ========================================
+    // LOCATION
+    // ========================================
+
     location,
 
     locationRestrictions:
@@ -2038,6 +2062,10 @@ function formatHimalayasJob(
     timezoneRestrictions:
       getTimezoneRestrictions(job),
 
+    // ========================================
+    // DESCRIPTION
+    // ========================================
+
     description,
 
     excerpt:
@@ -2045,17 +2073,28 @@ function formatHimalayasJob(
         job.excerpt || ""
       ),
 
-    url,
+    // ========================================
+    // APPLICATION
+    // ========================================
+
+    url:
+      application.url || "",
 
     applyUrl:
-      url,
+      application.url || "",
 
-    applyEmail,
+    applyEmail:
+      application.email || "",
 
-    applyMethod,
+    applyMethod:
+      application.method || "Application Link",
 
     applicationMethod:
-      applyMethod,
+      application.method || "Application Link",
+
+    // ========================================
+    // DATES
+    // ========================================
 
     created:
 
@@ -2073,6 +2112,10 @@ function formatHimalayasJob(
           ).toISOString()
         : "",
 
+    // ========================================
+    // SALARY
+    // ========================================
+
     salary_min:
       job.minSalary ?? null,
 
@@ -2088,6 +2131,10 @@ function formatHimalayasJob(
     salary:
       formatSalary(job),
 
+    // ========================================
+    // EMPLOYMENT
+    // ========================================
+
     contract_type:
       job.employmentType || "",
 
@@ -2101,6 +2148,10 @@ function formatHimalayasJob(
     employmentType:
       job.employmentType || "",
 
+    // ========================================
+    // CATEGORY
+    // ========================================
+
     category:
       categories,
 
@@ -2112,13 +2163,21 @@ function formatHimalayasJob(
 
     seniority,
 
+    // ========================================
+    // STATUS
+    // ========================================
+
     remote:
-      !visaSponsorship,
+      true,
 
     nigeriaFriendly:
       !visaSponsorship,
 
     visaSponsorship,
+
+    // ========================================
+    // SOURCE
+    // ========================================
 
     source:
       "Himalayas",
@@ -2317,53 +2376,13 @@ async function getRemoteJobs(
     acceptedJobs.map(
       item => {
 
-        const formatted =
-          formatHimalayasJob(
-            item.job,
-            {
-              visaSponsorship:
-                false
-            }
-          );
-
-
-        // ========================================
-        // Preserve application information
-        // ========================================
-
-        if (
-          item.application
-        ) {
-
-          formatted.applyEmail =
-            item.application.email ||
-            formatted.applyEmail ||
-            "";
-
-          formatted.applyUrl =
-            item.application.applicationUrl ||
-            formatted.applyUrl ||
-            formatted.url ||
-            "";
-
-          formatted.url =
-            formatted.applyUrl;
-
-          formatted.applyMethod =
-            item.application.method ===
-            "email"
-
-              ? "Email"
-
-              : "Company Website";
-
-          formatted.applicationMethod =
-            formatted.applyMethod;
-
-        }
-
-
-        return formatted;
+        return formatHimalayasJob(
+          item.job,
+          {
+            visaSponsorship:
+              false
+          }
+        );
 
       }
     );
@@ -2583,46 +2602,13 @@ async function getVisaJobs(
     acceptedVisaJobs.map(
       item => {
 
-        const formatted =
-          formatHimalayasJob(
-            item.job,
-            {
-              visaSponsorship:
-                true
-            }
-          );
-
-
-        if (
-          item.application
-        ) {
-
-          formatted.applyEmail =
-            item.application.email ||
-            "";
-
-          formatted.applyUrl =
-            item.application.applicationUrl ||
-            "";
-
-          formatted.url =
-            formatted.applyUrl;
-
-          formatted.applyMethod =
-            item.application.method ===
-            "email"
-
-              ? "Email"
-
-              : "Company Website";
-
-          formatted.applicationMethod =
-            formatted.applyMethod;
-
-        }
-
-
-        return formatted;
+        return formatHimalayasJob(
+          item.job,
+          {
+            visaSponsorship:
+              true
+          }
+        );
 
       }
     );
@@ -2642,6 +2628,7 @@ async function getVisaJobs(
       jobs
 
     }
+
   );
 
 
@@ -2668,7 +2655,7 @@ app.get(
       success: true,
 
       message:
-        "Nigeria Jobs API is running",
+        "International Remote Jobs API is running",
 
       status:
         "online",
@@ -2678,17 +2665,20 @@ app.get(
 
       rules: {
 
-        remote:
-          "Explicit Nigeria only",
+        jobType:
+          "International remote jobs",
+
+        nigeria:
+          "Must not be explicitly excluded",
 
         worldwide:
-          "Rejected",
+          "Accepted when no location restriction exists",
 
-        remoteRequirement:
-          "Must explicitly indicate remote/work from home",
+        remote:
+          "Himalayas remote listings; obvious onsite-only jobs rejected",
 
         application:
-          "Direct email or external application website"
+          "Application link, company website or email when available"
 
       },
 
@@ -2758,24 +2748,24 @@ app.get(
         page,
 
         type:
-          "remote",
+          "international-remote",
 
-        country:
+        applicants:
           "Nigeria",
 
         rules: {
 
+          international:
+            true,
+
+          nigeriaEligible:
+            true,
+
           worldwide:
-            false,
-
-          explicitNigeria:
             true,
 
-          explicitRemote:
-            true,
-
-          applicationRequired:
-            true
+          onsiteOnly:
+            false
 
         },
 
@@ -2976,17 +2966,20 @@ app.get(
 
         rules: {
 
-          worldwide:
-            "REJECTED",
+          internationalRemote:
+            true,
 
-          nigeria:
-            "MUST BE EXPLICIT",
+          worldwide:
+            "ACCEPTED",
+
+          explicitNigeria:
+            "NOT REQUIRED",
 
           remote:
-            "MUST BE EXPLICIT",
+            "REMOTE LISTING FROM HIMALAYAS",
 
           application:
-            "EMAIL OR EXTERNAL WEBSITE"
+            "APPLICATION LINK / COMPANY WEBSITE / EMAIL"
 
         },
 
@@ -3026,10 +3019,6 @@ app.get(
 
 // ========================================
 // GENERAL JOBS ENDPOINT
-// ========================================
-//
-// Existing frontend compatibility.
-// Returns the same strict Nigeria remote feed.
 // ========================================
 
 app.get(
@@ -3072,9 +3061,9 @@ app.get(
         page,
 
         type:
-          "remote",
+          "international-remote",
 
-        country:
+        applicants:
           "Nigeria",
 
         jobs
